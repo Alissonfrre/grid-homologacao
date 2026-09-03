@@ -1,0 +1,10 @@
+{
+  "name": "GRID — Homologação",
+  "short_name": "GRID Homolog",
+  "description": "Ambiente de testes da plataforma GRID. Dados fictícios.",
+  "start_url": "./app.html",
+  "display": "standalone",
+  "background_color": "#1E2A4A",
+  "theme_color": "#B45309",
+  "icons": []
+}

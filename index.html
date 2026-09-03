@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GRID — Homologação</title>
+<style>
+  :root{--navy:#1E2A4A;--amber:#F59E0B;--atencao:#B45309}
+  *{box-sizing:border-box;margin:0}
+  body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#E9EAEF;color:var(--navy);
+       min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+  .faixa{position:fixed;top:0;left:0;right:0;background:var(--atencao);color:#fff;text-align:center;
+         font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:6px 12px}
+  .cartao{background:#fff;border:1px solid #D2D7E1;border-radius:16px;padding:32px;max-width:520px;
+          box-shadow:0 2px 4px rgba(23,32,56,.06),0 12px 30px rgba(23,32,56,.14)}
+  .logo{width:36px;height:36px;border-radius:9px;background:var(--amber);color:var(--navy);
+        display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px;margin-bottom:16px}
+  h1{font-size:20px;font-weight:700;margin-bottom:8px}
+  p{font-size:14px;color:#414B63;line-height:1.7;margin-bottom:16px}
+  a{display:inline-block;background:var(--amber);color:var(--navy);text-decoration:none;font-weight:700;
+    font-size:14px;padding:11px 18px;border-radius:8px}
+  .obs{font-size:12px;color:#5E6780;margin-top:20px;line-height:1.6}
+</style>
+</head>
+<body>
+<div class="faixa">Ambiente de homologação · dados fictícios · não é o sistema do cliente</div>
+<div class="cartao">
+  <div class="logo">G</div>
+  <h1>GRID — ambiente de homologação</h1>
+  <p>Este é o ambiente de testes da plataforma. Ele usa um banco de dados separado, com dados inventados, e não tem
+     nenhuma ligação com o sistema em uso pelos clientes.</p>
+  <a href="./app.html">Abrir o sistema de testes</a>
+  <div class="obs">
+    Se você chegou aqui procurando o sistema de verdade, o endereço é <b>toledolabs.com.br</b>.
+  </div>
+</div>
+</body>
+</html>

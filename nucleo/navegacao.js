@@ -1,0 +1,147 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   GRID · nucleo/navegacao.js
+   Registro de módulos, menu em blocos e roteamento.
+
+   Regras que este arquivo garante:
+     • Um módulo ACRESCENTA itens; nunca substitui o menu existente.
+     • Com um módulo só, não existe bloco nem rótulo de módulo — o menu fica
+       igual ao que está em produção hoje.
+     • Item com mobile:false não aparece no menu do celular; a rota continua
+       existindo e mostra a tela "isto é do computador".
+     • Perfil sem acesso não vê o item. A trava de verdade é a RLS no banco.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+import { icone } from './icones.js';
+import { esc }   from './ui.js';
+import * as sessao from './sessao.js';
+
+const _modulos = new Map();
+let _rotaAtual = null;
+let _moduloAberto = null;
+
+export function registrar(mod) {
+  if (!mod || !mod.id) throw new Error('módulo sem id');
+  _modulos.set(mod.id, mod);
+  if (mod.css) carregarCSS(mod.css, mod.id);
+  return mod;
+}
+
+export const registrados = () => [..._modulos.values()];
+export const modulo = (id) => _modulos.get(id) || null;
+
+/* CSS do módulo, uma vez só, com a versão do app na URL. */
+const _css = new Set();
+function carregarCSS(href, id) {
+  if (_css.has(href) || typeof document === 'undefined') return;
+  _css.add(href);
+  const l = document.createElement('link');
+  l.rel = 'stylesheet';
+  l.href = href + (href.includes('?') ? '' : `?v=${window.APP_BUILD || 'dev'}`);
+  l.dataset.modulo = id;
+  document.head.appendChild(l);
+}
+
+/* Itens visíveis para o perfil atual e para o formato de tela atual. */
+function itensVisiveis(mod) {
+  const p = sessao.perfil();
+  const cel = sessao.ehCelular();
+  return (mod.itens || []).filter(i =>
+    !i.oculto && (!i.perfis || i.perfis.includes(p)) && (!cel || i.mobile !== false));
+}
+
+/* ── Menu ────────────────────────────────────────────────────────────────────
+   `extras` são os itens da plataforma (Início, Configurações), que não
+   pertencem a nenhum módulo.                                              */
+export function menu({ inicio, configuracoes = [], contadores = {} } = {}) {
+  const mods = registrados();
+  const umModuloSo = mods.length <= 1;
+
+  const item = (i) => `
+    <div class="sidebar-item ${i.id === _rotaAtual ? 'active' : ''}" data-nav="${esc(i.id)}">
+      <span class="si-icon">${icone(i.icone || 'grid')}</span>
+      <span class="si-label">${esc(i.rotulo)}</span>
+      ${contadores[i.id] ? `<span class="mod-cnt">${contadores[i.id]}</span>` : ''}
+    </div>`;
+
+  const bloco = (mod) => {
+    const aberto = _moduloAberto === mod.id || umModuloSo;
+    const cnt = (mod.itens || []).reduce((s, i) => s + (contadores[i.id] || 0), 0);
+    return `
+      <div class="mod-head ${aberto ? 'aberto' : ''}" data-modulo="${esc(mod.id)}">
+        ${icone(mod.icone || 'grid')}${esc(mod.nome)}
+        ${aberto ? `<span class="seta">${icone('chevrondown','sm')}</span>`
+                 : (cnt ? `<span class="cnt">${cnt}</span>` : `<span class="seta">${icone('chevronright','sm')}</span>`)}
+      </div>
+      ${aberto ? `<div class="mod-itens">${itensVisiveis(mod).map(item).join('')}</div>` : ''}`;
+  };
+
+  return `
+    ${inicio ? `<div style="padding:0 10px">${item(inicio)}</div>` : ''}
+    ${mods.map(bloco).join('')}
+    ${configuracoes.length ? `<div style="margin:12px 10px 0;padding-top:10px;border-top:1px solid rgba(255,255,255,.08)">
+      <div class="sidebar-section-label" style="padding-left:2px">Configurações</div>
+      ${configuracoes.filter(i => !sessao.ehCelular() || i.mobile !== false).map(item).join('')}
+    </div>` : ''}`;
+}
+
+/* Rodapé do celular: Início + 2 do módulo aberto + Conta ou seletor. */
+export function rodapeCelular() {
+  const mods = registrados();
+  const mod = modulo(_moduloAberto) || mods[0];
+  const dois = itensVisiveis(mod || { itens: [] }).slice(0, 3);
+  const fim = mods.length > 1
+    ? { id: '__modulos', rotulo: 'Módulos', icone: 'grid' }
+    : { id: 'conta', rotulo: 'Conta', icone: 'user' };
+  return [{ id: 'home', rotulo: 'Início', icone: 'home' }, ...dois, fim];
+}
+
+/* ── Rotas ──────────────────────────────────────────────────────────────── */
+export function rota(id) {
+  for (const mod of _modulos.values()) {
+    const i = (mod.itens || []).find(x => x.id === id);
+    if (i) return { modulo: mod, item: i };
+  }
+  return null;
+}
+
+export const rotaAtual = () => _rotaAtual;
+
+/* Abre uma tela de módulo. Devolve false quando a rota não é de módulo —
+   assim o roteador do app segue para o comportamento atual dele. */
+export async function abrir(id, params = {}) {
+  const r = rota(id);
+  if (!r) return false;
+  const { modulo: mod, item } = r;
+  _rotaAtual = id; _moduloAberto = mod.id;
+
+  const { soComputador, carregando } = await import('./ui.js');
+  const alvo = _destino();
+  alvo(carregando(4));
+
+  try {
+    if (sessao.ehCelular() && item.mobile === false) {
+      alvo(soComputador({
+        titulo: item.rotulo,
+        texto: item.textoDesktop || 'Esta tela foi feita para telas maiores. No computador ela abre direto.',
+        alternativa: item.alternativa
+      }));
+      return true;
+    }
+    const tela = await item.rota();
+    alvo(await tela.render(params));
+    if (tela.depois) tela.depois(params);
+  } catch (e) {
+    const { erro } = await import('./ui.js');
+    alvo(erro(e?.message || 'Falha ao abrir a tela.', { rotulo: 'Tentar de novo', acao: 'recarregar' }));
+  }
+  return true;
+}
+
+/* Onde desenhar: dentro do app real usa setConteudo (DOM duplo);
+   fora dele, um contêiner informado em iniciar(). */
+let _container = null;
+export function definirContainer(el) { _container = el; }
+function _destino() {
+  if (typeof window !== 'undefined' && typeof window.setConteudo === 'function') return window.setConteudo;
+  return (html) => { if (_container) _container.innerHTML = html; };
+}
