@@ -37,7 +37,26 @@ export const GRID = {
 
   /* Ponto único de entrada do roteador: devolve false quando a rota não
      pertence a nenhum módulo, e aí o app segue com o switch que já tem. */
-  async abrir(rota, params) { return navegacao.abrir(rota, params); }
+  async abrir(rota, params) { return navegacao.abrir(rota, params); },
+
+  /* Onde os módulos desenham. A casca passa o próprio container aqui uma vez;
+     sem isso, navegacao.abrir() não teria onde escrever. */
+  definirContainer(el) { navegacao.definirContainer(el); },
+
+  /* Itens de menu de todos os módulos carregados, já filtrados pelo perfil e
+     pelo que faz sentido no aparelho atual. A casca acrescenta ao menu dela;
+     quem decide o que existe continua sendo o manifesto de cada módulo. */
+  itensDeMenu(perfil) {
+    const fora = [];
+    for (const mod of navegacao.registrados()) {
+      for (const item of (mod.itens || [])) {
+        if (item.oculto) continue;                        // rotas de detalhe
+        if (item.perfis && !item.perfis.includes(perfil)) continue;
+        fora.push({ id: item.id, rotulo: item.rotulo, icone: item.icone, modulo: mod.id });
+      }
+    }
+    return fora;
+  }
 };
 
 if (typeof window !== 'undefined') window.GRID = GRID;

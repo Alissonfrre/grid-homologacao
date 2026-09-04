@@ -2,7 +2,8 @@
 import * as ui from '../../nucleo/ui.js';
 import { icone } from '../../nucleo/icones.js';
 import * as dados from '../../nucleo/dados.js';
-import { ESTAGIOS, rotuloEstagio, EXEMPLO } from './exemplo.js';
+import { ESTAGIOS, rotuloEstagio } from '../../nucleo/estagios.js';
+import { EXEMPLO } from './exemplo.js';
 
 export async function render(params = {}) {
   const id = params.id || EXEMPLO.crm_leads[0].id;

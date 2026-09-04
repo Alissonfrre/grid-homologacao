@@ -5,7 +5,7 @@ import * as ui from '../../nucleo/ui.js';
 import { icone } from '../../nucleo/icones.js';
 import * as dados from '../../nucleo/dados.js';
 import * as sessao from '../../nucleo/sessao.js';
-import { ESTAGIOS, rotuloEstagio } from './exemplo.js';
+import { ESTAGIOS, rotuloEstagio } from '../../nucleo/estagios.js';
 import { avisoDemo } from './painel.js';
 
 let _visao = 'quadro';                       // 'quadro' | 'tabela'
