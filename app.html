@@ -980,6 +980,13 @@ body.modo-suporte-ativo .sino-painel{top:calc(60px + var(--suporte-h,34px))}
 .turma-tabela .tt-inst .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 .turma-tabela .tt-falta{color:var(--text-3);opacity:.65}
 .turma-tabela .tt-semhora{color:var(--atencao-text);font-weight:600;margin-left:4px;font-size:11.5px}
+.turma-tabela .tt-semdata{color:var(--atencao-text);font-weight:600}
+.turma-card-semdata{color:var(--atencao-text)!important;font-weight:600}
+/* contexto do encontro na tela de execucao (2026-09-04) */
+.exec-contexto{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px 18px;background:var(--gray-50);border:1px solid var(--border);border-radius:var(--r-md);padding:12px 16px;margin-bottom:16px}
+.exec-ctx-i.wide{grid-column:1/-1}
+.exec-ctx-i .k{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);margin-bottom:3px}
+.exec-ctx-i .v{font-size:13px;color:var(--text-1);font-weight:500;line-height:1.5;white-space:pre-wrap}
 .turma-tabela .tt-aulas{display:inline-flex;align-items:center;gap:8px;justify-content:flex-end}
 .turma-tabela .tt-aulas .bar{height:4px;width:44px;background:var(--gray-100);border-radius:2px;overflow:hidden;flex-shrink:0}
 .turma-tabela .tt-aulas .bar i{display:block;height:100%;background:var(--green);border-radius:2px}
@@ -4995,7 +5002,7 @@ async function renderHomeAdmin() {
 
     <div class="h2-kpis" style="margin-bottom:16px">
       <div class="h2-kpi" onclick="irParaTurmasFiltradas('em_andamento')"><div class="ic">🟢</div><div class="n">${ativas}</div><div class="l">Turmas ativas</div><div class="d a">Em andamento</div></div>
-      <div class="h2-kpi" onclick="irParaTurmasFiltradas('agendada')"><div class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg></div><div class="n">${agendadas}</div><div class="l">Agendadas</div><div class="d m">Próximas</div></div>
+      <div class="h2-kpi" onclick="irParaTurmasFiltradas('agendada')"><div class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg></div><div class="n">${agendadas}</div><div class="l">A realizar</div><div class="d m">Próximas</div></div>
       <div class="h2-kpi" onclick="irPara('clientes')"><div class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><path d="M3 21h18M5 21V5a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v16M14 9h4a1 1 0 0 1 1 1v11M8 8h3M8 12h3M8 16h3"/></svg></div><div class="n">${cliAtivos}</div><div class="l">Clientes ativos</div><div class="d g">↑ ${turmasMes} turmas no mês</div></div>
       <div class="h2-kpi" onclick="irParaTurmasFiltradas('concluida')"><div class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/></svg></div><div class="n">${concluidas}</div><div class="l">Concluídas</div><div class="d m">Ver histórico</div></div>
     </div>
@@ -5077,7 +5084,7 @@ async function renderHomeAdmin() {
             <div class="home-list-name">${escapeHtml(t.catalogo?.nome||'Turma')}</div>
             <div class="home-list-sub">${escapeHtml(t.clientes?.nome||'—')}</div>
           </div>
-          <span class="badge ${t.status==='concluida'?'badge-green':t.status==='em_andamento'?'badge-blue':'badge-gray'}" style="flex-shrink:0;font-size:9px">${t.status==='concluida'?'Concluída':t.status==='em_andamento'?'Ativa':'Agendada'}</span>
+          <span class="badge ${t.status==='concluida'?'badge-green':t.status==='em_andamento'?'badge-blue':'badge-gray'}" style="flex-shrink:0;font-size:9px">${t.status==='concluida'?'Concluída':t.status==='em_andamento'?'Ativa':'A realizar'}</span>
         </div>`).join('')}
       </div>
     </div>
@@ -5143,7 +5150,7 @@ async function renderHomeComercial() {
     </div>
 
     <div class="h2-kpis" style="margin-bottom:16px">
-      <div class="h2-kpi" onclick="irParaTurmasFiltradas('agendada')"><div class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg></div><div class="n">${nAgendadas}</div><div class="l">Agendadas</div><div class="d m">Próximas</div></div>
+      <div class="h2-kpi" onclick="irParaTurmasFiltradas('agendada')"><div class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg></div><div class="n">${nAgendadas}</div><div class="l">A realizar</div><div class="d m">Próximas</div></div>
       <div class="h2-kpi" onclick="irParaTurmasFiltradas('em_andamento')"><div class="ic">🟢</div><div class="n">${nAndamento}</div><div class="l">Em andamento</div><div class="d a">Acompanhar</div></div>
       <div class="h2-kpi" onclick="irPara('clientes')"><div class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><path d="M3 21h18M5 21V5a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v16M14 9h4a1 1 0 0 1 1 1v11M8 8h3M8 12h3M8 16h3"/></svg></div><div class="n">${(clientes||[]).length}</div><div class="l">Clientes ativos</div><div class="d ${cliNovosMes>0?'g':'m'}">${cliNovosMes>0?`↑ ${cliNovosMes} novo${cliNovosMes!==1?'s':''} no mês`:'Ver clientes'}</div></div>
       <div class="h2-kpi ${nPendencia>0?'warn-b':''}" onclick="${nPendencia>0?'irParaTurmasComPendencia()':`irPara('turmas')`}"><div class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM9 12h6M9 16h4"/></svg></div><div class="n">${nPendencia}</div><div class="l">Com pendência</div><div class="d ${nPendencia>0?'a':'m'}">${nPendencia>0?'Resolver':'Tudo em dia'}</div></div>
@@ -9491,7 +9498,7 @@ async function abrirModalAdicionarEmTurmaExistente(id) {
           const datas = (t.sessoes||[]).map(s=>s.data).filter(Boolean).sort();
           const dataTxt = datas.length ? formatarData(datas[0]) : 'sem data definida';
           return `<div class="list-item" style="padding:10px 12px;cursor:pointer" data-action="confirmarAdicionarEmTurma" data-id="${t.id}">
-            <div class="li-info"><div class="li-title">Turma de ${dataTxt}</div><div class="li-sub">${t.status==='em_andamento'?'Em andamento':'Agendada'} · ${(t.turma_participantes||[]).length} participante(s)</div></div>
+            <div class="li-info"><div class="li-title">Turma de ${dataTxt}</div><div class="li-sub">${t.status==='em_andamento'?'Em andamento':'A realizar'} · ${(t.turma_participantes||[]).length} participante(s)</div></div>
           </div>`;
         }).join('')}
       </div>`,
@@ -10518,7 +10525,9 @@ function _htmlTurmasLista(lista, status, podeCriar) {
           <td><div class="tt-prim">${escapeHtml(t.catalogo?.nome||'—')}</div><div class="tt-sub">${escapeHtml(t.protocolo||'')}</div></td>
           <td>${escapeHtml(t.clientes?.nome||'—')}</td>
           <td>${nomesInstrutores.length?`<span class="tt-inst"><span class="dot" style="background:${_corInstrutorTurma(instId)}"></span>${escapeHtml(nomesInstrutores.join(', '))}</span>`:'<span class="tt-falta">Sem instrutor</span>'}</td>
-          <td class="dir">${dataFmt}${horaTxt?' · '+horaTxt:'<span class="tt-semhora">sem hora</span>'}</td>
+          <td class="dir">${totalSes===0
+            ? '<span class="tt-semdata">Sem data</span>'
+            : `${dataFmt}${horaTxt?' · '+horaTxt:'<span class="tt-semhora">sem hora</span>'}`}</td>
           <td class="dir">${totalSes>0?`<span class="tt-aulas">${concSes} de ${totalSes}<span class="bar"><i style="width:${pct}%"></i></span></span>`:'<span style="opacity:.4">—</span>'}</td>
           <td class="dir">
             <span class="tt-selos">
@@ -11062,17 +11071,32 @@ const CATALOGO_PENDENCIAS_TURMA = [
   // selo do card, na coluna Status da lista e nos botões da faixa — lugares onde
   // a frase inteira não cabe e o "Pendência" genérico obrigava a abrir a turma
   // pra descobrir o que faltava (relatado pelo Alisson em 04/09).
-  { id: 'sem_participantes', prioridade: 1, label: 'Sem participantes cadastrados', curto: 'Sem participantes',
+  // Regra NOVA (2026-09-04). Turma criada e nunca agendada — nenhum encontro.
+  // Confirmado em produção: 3 turmas nesse estado na Avanteseg, entre elas as
+  // duas do print do Alisson. É a pendência mais bloqueante das cinco (sem
+  // encontro não há o que executar), por isso prioridade 1: é ela que aparece
+  // no selo quando a turma tem mais de uma pendência.
+  //
+  // Repare que 'sem_instrutor' e 'sem_horario' usam `.some()` sobre as sessões
+  // e por isso NÃO disparam quando não há sessão nenhuma — sem esta regra, uma
+  // turma completamente vazia passava como configurada.
+  { id: 'sem_encontro', prioridade: 1, label: 'Nenhum encontro agendado', curto: 'Sem encontro',
+    detectar: (t, sessoes) => (sessoes||[]).length === 0 },
+  { id: 'sem_participantes', prioridade: 2, label: 'Sem participantes cadastrados', curto: 'Sem participantes',
     detectar: (t) => (t.turma_participantes||[]).length === 0 },
-  { id: 'sem_instrutor', prioridade: 2, label: 'Encontro sem instrutor atribuído', curto: 'Sem instrutor',
+  { id: 'sem_instrutor', prioridade: 3, label: 'Encontro sem instrutor atribuído', curto: 'Sem instrutor',
     detectar: (t, sessoes) => (sessoes||[]).some(s => !s.instrutor_id) },
   // Regra NOVA (2026-09-04). Encontro com data e sem hora não pode ser executado
   // e não entra na trava de conflito de agenda — a constraint EXCLUDE de `sessoes`
   // exige hora_inicio e hora_fim para comparar. Era pendência real passando como
   // turma completa: foi exatamente o caso que o Alisson encontrou na Avanteseg.
-  { id: 'sem_horario', prioridade: 3, label: 'Encontro sem horário definido', curto: 'Sem horário',
+  // Hoje esta regra não dispara em produção (conferido em 04/09: zero encontros
+  // sem hora). Fica de guarda: a hora de TÉRMINO é opcional no formulário de
+  // criação, e encontro sem hora fica fora da trava de conflito de agenda — a
+  // constraint EXCLUDE de `sessoes` compara tsrange(data+hora) e ignora nulo.
+  { id: 'sem_horario', prioridade: 4, label: 'Encontro sem horário definido', curto: 'Sem horário',
     detectar: (t, sessoes) => (sessoes||[]).some(s => !s.hora_inicio || !s.hora_fim) },
-  { id: 'sem_local', prioridade: 4, label: 'Local do treinamento não definido', curto: 'Sem local',
+  { id: 'sem_local', prioridade: 5, label: 'Local do treinamento não definido', curto: 'Sem local',
     detectar: (t) => !(t.local||'').trim() },
 ];
 
@@ -11231,10 +11255,16 @@ function _htmlTurmaCard(t) {
       <span style="flex-shrink:0"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><path d="M3 21h18M5 21V5a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v16M14 9h4a1 1 0 0 1 1 1v11M8 8h3M8 12h3M8 16h3"/></svg></span>
       <span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(t.clientes?.nome||'—')}</span>
     </div>
-    ${dataRef?`<div class="turma-card-date">
-      <span style="flex-shrink:0"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg></span>
-      <span>em ${formatarData(dataRef)}${horaTxtCard?' · '+horaTxtCard:''}</span>
-    </div>`:''}
+    ${(() => {
+      // 2026-09-04: _turmaDataRef cai na data de CRIAÇÃO da turma quando não há
+      // nenhum encontro — o que serve para ordenar, mas não para exibir: o card
+      // escrevia "em 19/08/2026" e o operador lia aquilo como a data do
+      // treinamento. Era a data do cadastro. Agora só mostra data quando existe
+      // encontro de verdade.
+      const icone = `<span style="flex-shrink:0"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg></span>`;
+      if (!sessoes.length) return `<div class="turma-card-date turma-card-semdata">${icone}<span>Sem data definida</span></div>`;
+      return dataRef ? `<div class="turma-card-date">${icone}<span>em ${formatarData(dataRef)}${horaTxtCard?' · '+horaTxtCard:''}</span></div>` : '';
+    })()}
     ${(() => { const nomesInst = _turmaInstrutoresNomes(t); if (!nomesInst.length) return ''; const instId = sessoes.find(s=>s.instrutor_id)?.instrutor_id; return `<div class="turma-card-inst"><span class="dot" style="background:${_corInstrutorTurma(instId)}"></span>${escapeHtml(nomesInst.join(', '))}</div>`; })()}
     ${progressHtml}
     ${pendHtml}
@@ -11655,7 +11685,7 @@ async function verTurma(id, opts = {}) {
       }
     } catch(e) { _tvPresencas = {}; }
     const st           = t.status||'agendada';
-    const SL = {agendada:'Agendada',em_andamento:'Em andamento',concluida:'Concluída',cancelada:'Cancelada'};
+    const SL = {agendada:'A realizar',em_andamento:'Em andamento',concluida:'Concluída',cancelada:'Cancelada'};
     const SB = {agendada:'badge-gray',em_andamento:'badge-blue',concluida:'badge-green',cancelada:'badge-red'};
     const nomeT = t.catalogo?.nome||'Treinamento';
     const nomeC = t.clientes?.nome||'-';
@@ -17140,6 +17170,23 @@ async function abrirExecucao(turmaId, sessaoIdParam) {
         <span class="badge ${sessaoAtiva?.concluida?'badge-green':'badge-blue'}">${sessaoAtiva?.concluida?'Concluído — revisão':'Em andamento'}</span>
       </div>
 
+      <!-- 2026-09-04 (pedido do Alisson): o que o operador escreve ao agendar
+           tem que chegar em quem executa. A tela de execução mostrava só curso,
+           cliente e data — nem o endereço, nem a sala, nem as observações da
+           turma. A sala é do ENCONTRO (sessoes.local), não da turma: cada dia
+           pode ser numa sala diferente, por isso vem de sessaoAtiva. -->
+      ${(() => {
+        const itens = [];
+        if (t.local) itens.push(['Local', t.local]);
+        if (sessaoAtiva?.local) itens.push(['Sala / complemento', sessaoAtiva.local]);
+        if (sessaoAtiva?.hora_inicio) itens.push(['Horário', sessaoAtiva.hora_inicio.slice(0,5) + (sessaoAtiva.hora_fim?' às '+sessaoAtiva.hora_fim.slice(0,5):'')]);
+        if (t.observacoes) itens.push(['Observações', t.observacoes]);
+        if (!itens.length) return '';
+        return `<div class="exec-contexto">
+          ${itens.map(([k,v]) => `<div class="exec-ctx-i${k==='Observações'?' wide':''}"><div class="k">${k}</div><div class="v">${escapeHtml(v)}</div></div>`).join('')}
+        </div>`;
+      })()}
+
       ${deCache && window._execSemCacheDoEncontro ? `<div style="display:flex;align-items:center;gap:6px;background:var(--amber-l);color:var(--amber-text);padding:8px 14px;border-radius:var(--r-md);font-size:12px;font-weight:600;margin-bottom:12px"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><path d="M2 8.5A16 16 0 0 1 8 5M22 8.5a16 16 0 0 0-4.5-2.7M5.5 12.5A11 11 0 0 1 9 10.4M18.5 12.5a11 11 0 0 0-2.6-1.7M9 16a5.5 5.5 0 0 1 5-.4"/><path d="M12 20h.01M3 3l18 18"/></svg> Sem conexão agora, e este encontro específico ainda não tinha sido aberto online neste dispositivo — a lista de presença abaixo pode estar incompleta até você reconectar.</div>` : deCache ? `<div style="display:flex;align-items:center;gap:6px;background:var(--blue-l);color:var(--blue-text);padding:8px 14px;border-radius:var(--r-md);font-size:12px;font-weight:600;margin-bottom:12px"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><path d="M2 8.5A16 16 0 0 1 8 5M22 8.5a16 16 0 0 0-4.5-2.7M5.5 12.5A11 11 0 0 1 9 10.4M18.5 12.5a11 11 0 0 0-2.6-1.7M9 16a5.5 5.5 0 0 1 5-.4"/><path d="M12 20h.01M3 3l18 18"/></svg> Sem conexão agora — exibindo dados salvos localmente na última vez que este dispositivo esteve online.</div>` : ''}
 
       <div class="badge-fila-offline" style="display:none;align-items:center;gap:6px;background:var(--amber-l);color:var(--amber-text);padding:8px 14px;border-radius:var(--r-md);font-size:12px;font-weight:600;margin-bottom:16px">
@@ -19212,7 +19259,7 @@ function relVerCliente(clienteId) {
   const concluidas   = turmasCliente.filter(t => t.status === 'concluida').length;
   const emAndamento  = turmasCliente.filter(t => t.status === 'em_andamento').length;
 
-  const statusLabel = { agendada: 'Agendada', em_andamento: 'Em andamento', concluida: 'Concluída', cancelada: 'Cancelada' };
+  const statusLabel = { agendada: 'A realizar', em_andamento: 'Em andamento', concluida: 'Concluída', cancelada: 'Cancelada' };
   const statusColor = { agendada: '#F59E0B', em_andamento: '#1E2A4A', concluida: '#059669', cancelada: '#5E6780' };
 
   const linhasTabela = turmasCliente.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).map(t => {
@@ -19540,7 +19587,7 @@ function _renderRelatorioInstrutorDetalhe() {
   const datasTodas = sessoesInstrutor.map(s => s.data).filter(Boolean).sort();
   const periodoAtuacao = datasTodas.length ? `desde ${formatarData(datasTodas[0])}` : '';
 
-  const statusLabel = { agendada: 'Agendada', em_andamento: 'Em andamento', concluida: 'Concluída', cancelada: 'Cancelada' };
+  const statusLabel = { agendada: 'A realizar', em_andamento: 'Em andamento', concluida: 'Concluída', cancelada: 'Cancelada' };
   const statusColor = { agendada: '#F59E0B', em_andamento: '#1E2A4A', concluida: '#059669', cancelada: '#5E6780' };
 
   const ordenadas = turmasInstrutor.slice().sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
@@ -19591,7 +19638,7 @@ function _renderRelatorioInstrutorDetalhe() {
           <input type="checkbox" class="rel-inst-sit" value="concluida" onchange="_relInstrutorAtualizarFiltro()" ${!filtro.situacoes || filtro.situacoes.includes('concluida') ? 'checked' : ''}> Concluídas
         </label>
         <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-1);margin-bottom:4px;cursor:pointer">
-          <input type="checkbox" class="rel-inst-sit" value="agendada" onchange="_relInstrutorAtualizarFiltro()" ${!filtro.situacoes || filtro.situacoes.includes('agendada') ? 'checked' : ''}> Agendadas
+          <input type="checkbox" class="rel-inst-sit" value="agendada" onchange="_relInstrutorAtualizarFiltro()" ${!filtro.situacoes || filtro.situacoes.includes('agendada') ? 'checked' : ''}> A realizar
         </label>
         <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-1);margin-bottom:4px;cursor:pointer">
           <input type="checkbox" class="rel-inst-sit" value="em_andamento" onchange="_relInstrutorAtualizarFiltro()" ${!filtro.situacoes || filtro.situacoes.includes('em_andamento') ? 'checked' : ''}> Em andamento
@@ -19748,7 +19795,7 @@ async function exportarRelatorioInstrutorPDF(instrutorId) {
   heads.forEach((h, i) => doc.text(h, colX[i], 92));
   doc.setDrawColor(...BORD); doc.line(14, 94, W - 14, 94);
 
-  const statusLabelPdf = { agendada: 'Agendada', em_andamento: 'Em andamento', concluida: 'Concluida', cancelada: 'Cancelada' };
+  const statusLabelPdf = { agendada: 'A realizar', em_andamento: 'Em andamento', concluida: 'Concluida', cancelada: 'Cancelada' };
   const statusColorPdf = { agendada: AMBER, em_andamento: NAVY, concluida: GREEN, cancelada: [148, 163, 184] };
   const partAll = raw.participantes || [];
   let ty = 100;
@@ -19835,7 +19882,7 @@ function relVerTreinamento(catalogoId) {
   const totalHoras = turmas.filter(t => t.status === 'concluida').reduce((s, t) => s + (t.catalogo?.carga_horaria || 0), 0);
   const concluidas = turmas.filter(t => t.status === 'concluida').length;
 
-  const statusLabel = { agendada: 'Agendada', em_andamento: 'Em andamento', concluida: 'Concluída', cancelada: 'Cancelada' };
+  const statusLabel = { agendada: 'A realizar', em_andamento: 'Em andamento', concluida: 'Concluída', cancelada: 'Cancelada' };
   const statusColor = { agendada: '#F59E0B', em_andamento: '#1E2A4A', concluida: '#059669', cancelada: '#5E6780' };
   const linhas = turmas.slice().sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).map(t => {
     const nPart = _pessoasTreinadasTurma(t.id, certPorTurma);
@@ -20218,7 +20265,7 @@ async function exportarRelatorioExecutivoPDF() {
   // Detalhamento operacional — faixa fina, peso visual secundário
   const opY = hY + hH + 5;
   const opItens = [
-    ['Em andamento', tAtivas], ['Concluidas', tConcluidas], ['Agendadas', tAgendadas],
+    ['Em andamento', tAtivas], ['Concluidas', tConcluidas], ['A realizar', tAgendadas],
     ['Canceladas', tCanceladas], ['Sessoes realizadas', sessoesReal], ['Media participantes', mediaPart],
   ];
   const opW = (W-28)/opItens.length;
@@ -26477,7 +26524,7 @@ function _buildKpiGrid({tAtivas,tConcluidas,tConcluidasAnt,partUnicos,partUnicos
     ${_kpi('<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/></svg>', tConcluidas, 'Concluídas', _deltaTag(tConcluidas,tConcluidasAnt), 'var(--green)', dadosTurmas, "irParaTurmasFiltradas('concluida')")}
     ${_kpi('<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><path d="M16 20v-1a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v1"/><circle cx="9.5" cy="8" r="3.2"/><path d="M17 15a4 4 0 0 1 4 4v1M16.5 5.2a3.2 3.2 0 0 1 0 5.6"/></svg>', partUnicos, 'Pessoas treinadas', _deltaTag(partUnicos,partUnicosAnt), 'var(--amber)', dadosPart)}
     ${_kpi('⏱', horasTotal+'h', 'Horas de treinamento', _deltaTag(horasTotal,horasTotalAnt), '#7C3AED', dadosSessoes)}
-    ${_kpi('<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM9 12h6M9 16h4"/></svg>', tAgendadas, 'Agendadas', '', 'var(--amber)', null, "irParaTurmasFiltradas('agendada')")}
+    ${_kpi('<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM9 12h6M9 16h4"/></svg>', tAgendadas, 'A realizar', '', 'var(--amber)', null, "irParaTurmasFiltradas('agendada')")}
     ${_kpi('<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><path d="M3 21h18M5 21V5a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v16M14 9h4a1 1 0 0 1 1 1v11M8 8h3M8 12h3M8 16h3"/></svg>', cliAtivos, 'Clientes ativos', '', 'var(--navy)', null)}
     ${_kpi('⚪', tCanceladas, 'Canceladas', '', 'var(--text-3)', null, "irParaTurmasFiltradas('cancelada')")}
     ${_kpi('<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><path d="M3 21h18"/><path d="M6 21V11M11 21V5M16 21v-7M21 21v-4"/></svg>', totalTurmas, 'Total de turmas', '', 'var(--navy)', null)}
@@ -26618,7 +26665,7 @@ async function exportarRelatorioComparativoPDF() {
   // cache do navegador. Agora o nome do cache deriva de APP_BUILD, que
   // muda a cada publicação, e o activate do sw.js apaga os caches
   // anteriores sozinho.
-  var APP_BUILD = 'h2';
+  var APP_BUILD = 'h5';
   window.APP_BUILD = APP_BUILD;
 
   function _mostrarBannerAtualizacao(){
