@@ -10899,7 +10899,7 @@ function _turmasFaixaPendHtml() {
     <span class="tfx-ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4.5M12 17.2h.01"/></svg></span>
     <div class="tfx-tx">
       <div class="t1">${q} turma${q>1?'s':''} ${q>1?'não estão prontas':'não está pronta'} para rodar</div>
-      <div class="t2">Falta configuração antes do encontro. Clique no que falta para ver quais.</div>
+      <div class="t2">Toque no que falta para ver quais são.</div>
       <div class="tfx-chips">
         ${chip('todas','Todas',q)}
         ${tipos.map(p => chip(p.id, p.curto, conta[p.id])).join('')}
@@ -12571,7 +12571,7 @@ function _hacToggle(pref) {
 function _hacCampoHtml(pref, marcado) {
   return `<label class="hac-campo">
     <input type="checkbox" id="${pref}HAC" ${marcado?'checked':''} onchange="_hacToggle('${pref}')">
-    <span><b>Dia reservado — horário a confirmar com o cliente</b><i>Segura o dia inteiro na agenda do instrutor. As horas gravadas são só um marcador, não contam como aula, e a turma fica com a pendência "Horário a confirmar" até o acerto.</i></span>
+    <span><b>Reservar o dia sem definir horário</b><i>O dia fica bloqueado na agenda do instrutor. A turma aparece nas pendências até o horário ser definido.</i></span>
   </label>`;
 }
 
@@ -17242,7 +17242,7 @@ async function abrirExecucao(turmaId, sessaoIdParam) {
         const itens = [];
         if (t.local) itens.push(['Local', t.local]);
         if (sessaoAtiva?.local) itens.push(['Sala / complemento', sessaoAtiva.local]);
-        if (sessaoAtiva?.horario_a_confirmar) itens.push(['Horário', 'A confirmar — o dia está reservado, mas o horário ainda não foi acertado com o cliente']);
+        if (sessaoAtiva?.horario_a_confirmar) itens.push(['Horário', 'A confirmar com o cliente']);
         else if (sessaoAtiva?.hora_inicio) itens.push(['Horário', sessaoAtiva.hora_inicio.slice(0,5) + (sessaoAtiva.hora_fim?' às '+sessaoAtiva.hora_fim.slice(0,5):'')]);
         if (t.observacoes) itens.push(['Observações', t.observacoes]);
         if (!itens.length) return '';
@@ -26729,7 +26729,7 @@ async function exportarRelatorioComparativoPDF() {
   // cache do navegador. Agora o nome do cache deriva de APP_BUILD, que
   // muda a cada publicação, e o activate do sw.js apaga os caches
   // anteriores sozinho.
-  var APP_BUILD = 'h6';
+  var APP_BUILD = 'h7';
   window.APP_BUILD = APP_BUILD;
 
   function _mostrarBannerAtualizacao(){
