@@ -21,6 +21,19 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- 2026-09-04: os modulos do nucleo comecavam a baixar so DEPOIS da consulta
+     de contrato — rede ociosa durante todo o login. Com modulepreload eles
+     baixam em paralelo com o HTML e a autenticacao, e quando _iniciarPlataforma
+     roda, ja estao no cache. Nao executa nada: so busca. Para quem nao tem
+     modulo, sao 3 arquivos pequenos que o navegador descarta. -->
+<link rel="modulepreload" href="./nucleo/plataforma.js">
+<link rel="modulepreload" href="./nucleo/navegacao.js">
+<link rel="modulepreload" href="./nucleo/dados.js">
+<link rel="modulepreload" href="./nucleo/ui.js">
+<link rel="modulepreload" href="./nucleo/sessao.js">
+<link rel="modulepreload" href="./nucleo/icones.js">
+<link rel="modulepreload" href="./nucleo/estagios.js">
+<link rel="preload" as="style" href="./nucleo/design-system-aditivo.css">
 <!-- jsPDF, QRCode, DOMPurify, Forge, SheetJS(xlsx) e Quill deixaram de carregar
      aqui (2026-08-29) — ~640 KiB sem nenhum uso na tela de login, que estavam
      bloqueando a renderização inicial. Agora carregam sob demanda via
@@ -982,6 +995,7 @@ body.modo-suporte-ativo .sino-painel{top:calc(60px + var(--suporte-h,34px))}
 .turma-tabela .tt-semhora{color:var(--atencao-text);font-weight:600;margin-left:4px;font-size:11.5px}
 .turma-tabela .tt-semdata{color:var(--atencao-text);font-weight:600}
 .turma-card-semdata{color:var(--atencao-text)!important;font-weight:600}
+@keyframes tlBrilho{0%{background-position:100% 50%}100%{background-position:0 50%}}
 /* ── Menu em blocos de modulo (2026-09-04, mockup aprovado) ─────────────
    So entra em cena quando a organizacao tem modulo alem do Treinamentos.
    Com um modulo so, um cabecalho de bloco nao organiza nada — o menu
@@ -3023,6 +3037,22 @@ function showToast(msg, tipo='info', dur=3500) {
   requestAnimationFrame(()=>requestAnimationFrame(()=>t.classList.add('show')));
   setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),300);},dur);
 }
+// Enquanto a primeira tela nao chega, o conteudo mostra a FORMA do que vem —
+// nao um retangulo cinza. A diferenca nao e estetica: area vazia parece
+// sistema quebrado, esqueleto parece sistema carregando.
+function esqueletoConteudo() {
+  const barra = (l, alt) => `<div style="height:${alt||14}px;width:${l};border-radius:7px;background:linear-gradient(90deg,var(--gray-100) 25%,var(--gray-50) 37%,var(--gray-100) 63%);background-size:400% 100%;animation:tlBrilho 1.3s ease infinite;margin-bottom:10px"></div>`;
+  return `<div style="padding:4px 0">
+    ${barra('180px', 22)}${barra('320px')}
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:20px 0">
+      ${[1,2,3,4].map(() => `<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px">${barra('60%',10)}${barra('40%',20)}</div>`).join('')}
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px">
+      ${[1,2,3,4,5].map(() => barra(['92%','78%','85%','70%','88%'][Math.floor(Math.random()*5)])).join('')}
+    </div>
+  </div>`;
+}
+
 function showLoading(msg='Carregando...') {
   document.getElementById('loadingText').textContent = msg;
   document.getElementById('loading-overlay').classList.add('show');
@@ -3538,13 +3568,33 @@ async function entrarNoApp() {
     // Edge Function soc-integracao (ver migration-soc-integracao-webservice.sql).
     usuarioAtual.orgSocIntegracaoAtiva = !!org?.soc_integracao_ativa;
   }
+  marcaTempo('organizacao lida');
   showScreen('screenApp');
-  // Antes de montar o menu: descobre os modulos contratados e carrega os que
-  // existirem. Se nada carregar, configurarNavegacao() monta o menu de sempre.
-  await _iniciarPlataforma();
-  _injetarMenuDosModulos();
 
+  // ── Ordem de pintura (2026-09-04, correcao de carregamento) ─────────────
+  // ANTES: `await _iniciarPlataforma()` vinha aqui, ANTES de configurarNavegacao().
+  // Resultado: a tela aparecia com a barra lateral VAZIA — sem menu e sem
+  // conteudo — durante toda a consulta de modulos MAIS o download e a
+  // compilacao de 8 modulos ES e uma folha de estilo. Era o intervalo do print
+  // que o Alisson mandou, e a culpa era da ordem, nao da rede.
+  //
+  // AGORA: o menu pinta imediatamente, usando a lista de modulos guardada da
+  // ultima sessao (acerta em 100% dos casos a partir do segundo login, porque
+  // contrato de modulo muda uma vez por ano, nao por minuto). Os modulos
+  // carregam DEPOIS, em segundo plano, e o menu se completa sozinho quando
+  // eles chegam. Nenhum estado intermediario vazio.
+  _modulosAtivos = _modulosEmCache();
+  _injetarMenuDosModulos({ soCache: true });
   configurarNavegacao();
+
+  // Em segundo plano: confere o contrato de verdade e carrega os modulos.
+  // Sem await — a tela ja esta utilizavel.
+  _iniciarPlataforma().then(() => {
+    marcaTempo('modulos carregados');
+    _injetarMenuDosModulos();
+    configurarNavegacao();
+    marcarNavAtivo(paginaAtual);
+  });
   _sessaoIniciar(); // iniciar monitoramento de inatividade
   // Lê hash da URL para restaurar a página ao fazer login ou recarregar —
   // usa _hashPagina() (ignora querystring) pra reconhecer links profundos
@@ -3557,7 +3607,10 @@ async function entrarNoApp() {
   window._hashInicialQuery = (paginaInicial === paginaHash && location.hash.includes('?'))
     ? location.hash.slice(location.hash.indexOf('?'))
     : null;
+  marcaTempo('menu pintado');
   await irPara(paginaInicial);
+  marcaTempo('tela util');
+  _relatorioCarregamento();
   _prefetchLibsPesadasEmSegundoPlano();
 }
 
@@ -3626,6 +3679,19 @@ const NAV_BOTTOM = {
 let _GRID = null;
 let _modulosAtivos = [];
 
+// A lista de modulos contratados muda raramente (uma venda, uma renovacao).
+// Guardar por usuario permite pintar o menu certo no primeiro quadro, em vez
+// de esperar a rede para descobrir algo que ja sabiamos. A trava de verdade
+// continua sendo a RLS no banco: se o cache mentir, o modulo aparece no menu e
+// nao devolve dado nenhum — falha visivel, nao falha silenciosa de seguranca.
+function _chaveCacheModulos() { return 'tl_modulos_' + (usuarioAtual?.id || 'x'); }
+function _modulosEmCache() {
+  try { return JSON.parse(localStorage.getItem(_chaveCacheModulos()) || '[]'); } catch(e) { return []; }
+}
+function _guardarModulosEmCache(ids) {
+  try { localStorage.setItem(_chaveCacheModulos(), JSON.stringify(ids || [])); } catch(e) {}
+}
+
 async function _carregarModulosDaOrg() {
   if (!usuarioAtual.org_id) { console.info('[modulos] sem org_id (provedor)'); return []; }
   try {
@@ -3633,6 +3699,7 @@ async function _carregarModulosDaOrg() {
       .select('modulo').eq('org_id', usuarioAtual.org_id).eq('ativo', true);
     if (error) throw error;
     const ids = (data || []).map(m => m.modulo);
+    _guardarModulosEmCache(ids);
     console.info('[modulos] contratados:', ids);
     return ids;
   } catch (e) {
@@ -3751,12 +3818,43 @@ function _ligarAcoesDeModulo() {
 // Itens de menu do CRM, injetados em NAV so quando o modulo esta ativo E o
 // perfil tem direito. Vem do proprio manifesto do modulo (modulo.js) — este
 // arquivo nao mantem uma segunda lista para desatualizar.
-function _injetarMenuDosModulos() {
-  if (!_GRID) { console.info('[modulos] nenhum modulo ativo — menu padrao'); return; }
+// Itens de menu conhecidos SEM carregar o modulo. Existe para o primeiro
+// quadro: o manifesto de verdade vem no modulo, mas esperar o download dele
+// para desenhar um menu e o que criava a tela vazia. Quando o modulo chega,
+// _injetarMenuDosModulos roda de novo com a lista real e o menu se corrige —
+// na pratica sao identicos, e por isso o menu nao "pula".
+const MENU_MODULO_PREVIO = {
+  crm: [
+    { id:'crm',            rotulo:'Painel comercial', icone:'trend',    perfis:['administrador','comercial'] },
+    { id:'crm-conversas',  rotulo:'Conversas',        icone:'chat',     perfis:['administrador','comercial'] },
+    { id:'crm-funil',      rotulo:'Funil de vendas',  icone:'funnel',   perfis:['administrador','comercial'] },
+    { id:'crm-contatos',   rotulo:'Contatos',         icone:'user',     perfis:['administrador','comercial'] },
+    { id:'crm-atividades', rotulo:'Atividades',       icone:'activity', perfis:['administrador','comercial'] },
+    { id:'crm-numeros',    rotulo:'WhatsApp',         icone:'phone',    perfis:['administrador'] }
+  ]
+};
+
+function _injetarMenuDosModulos({ soCache = false } = {}) {
   const perfil = usuarioAtual.perfil;
-  const itens = _GRID.itensDeMenu(perfil);
-  console.info('[modulos] itens de menu para', perfil, ':', itens.map(i => i.id));
+  let itens;
+  if (soCache) {
+    itens = _modulosAtivos.flatMap(id => (MENU_MODULO_PREVIO[id] || [])
+      .filter(i => !i.perfis || i.perfis.includes(perfil))
+      .map(i => ({ ...i, modulo: id })));
+  } else {
+    if (!_GRID) { console.info('[modulos] nenhum modulo ativo — menu padrao'); return; }
+    itens = _GRID.itensDeMenu(perfil);
+    console.info('[modulos] itens de menu para', perfil, ':', itens.map(i => i.id));
+  }
   if (!itens.length) return;
+  // Redesenho: tira o que a passada anterior colocou, para nao duplicar item.
+  const navLimpar = NAV[perfil];
+  if (navLimpar) {
+    const ids = new Set(itens.map(i => i.id));
+    for (let k = navLimpar.length - 1; k >= 0; k--) {
+      if (ids.has(navLimpar[k].id) || navLimpar[k].sec === 'CRM') navLimpar.splice(k, 1);
+    }
+  }
   const nav = NAV[perfil];
   if (!nav) return;
   const iConta = nav.findIndex(i => i.sec === 'Conta');
@@ -3828,9 +3926,25 @@ function _blocoAberto(id, padrao) {
   try { const v = localStorage.getItem('tl_menu_bloco_' + id); return v === null ? padrao : v === '1'; } catch(e) { return padrao; }
 }
 
+// Nome de exibicao do bloco antes do modulo carregar. Depois que ele chega,
+// o nome vem do proprio manifesto.
+const NOME_MODULO_PREVIO = { crm: 'CRM' };
+
 function _htmlMenuLateral(itens) {
+  const perfilAtual = usuarioAtual.perfil;
   const idsDeModulo = {};                       // id do item → id do módulo
-  if (_GRID) for (const item of _GRID.itensDeMenu(usuarioAtual.perfil)) idsDeModulo[item.id] = item.modulo;
+  const nomes = {};
+  if (_GRID) {
+    for (const item of _GRID.itensDeMenu(perfilAtual)) idsDeModulo[item.id] = item.modulo;
+    for (const m of _GRID.modulos()) nomes[m.id] = { nome: m.nome, icone: ICONE_MODULO_APP[m.icone] || 'chart' };
+  } else {
+    // Primeiro quadro: os modulos ainda estao baixando. O menu ja e o
+    // definitivo — ele nao vai mudar quando eles chegarem.
+    for (const id of _modulosAtivos) {
+      for (const i of (MENU_MODULO_PREVIO[id] || [])) if (!i.perfis || i.perfis.includes(perfilAtual)) idsDeModulo[i.id] = id;
+      nomes[id] = { nome: NOME_MODULO_PREVIO[id] || id.toUpperCase(), icone: 'chart' };
+    }
+  }
   const temModulo = Object.keys(idsDeModulo).length > 0;
 
   // Sem módulo: exatamente o menu de sempre, sem uma linha de diferença.
@@ -3847,9 +3961,9 @@ function _htmlMenuLateral(itens) {
 
   const blocos = [];
   if (base.length) blocos.push(_blocoMenuHtml('treinamentos', 'Treinamentos', 'clip', base, _blocoAberto('treinamentos', true)));
-  for (const mod of _GRID.modulos()) {
-    const seus = soItens.filter(i => idsDeModulo[i.id] === mod.id);
-    if (seus.length) blocos.push(_blocoMenuHtml(mod.id, mod.nome, ICONE_MODULO_APP[mod.icone] || 'chart', seus, _blocoAberto(mod.id, true)));
+  for (const modId of Object.keys(nomes)) {
+    const seus = soItens.filter(i => idsDeModulo[i.id] === modId);
+    if (seus.length) blocos.push(_blocoMenuHtml(modId, nomes[modId].nome, nomes[modId].icone, seus, _blocoAberto(modId, true)));
   }
 
   return `<div style="padding:0 10px">${inicio.map(_itemMenuHtml).join('')}</div>
@@ -3946,6 +4060,10 @@ async function irPara(pagina, params={}) {
   const novoHash = '#' + pagina;
   if (location.hash !== novoHash) history.pushState({pagina}, '', novoHash);
   showLoading();
+  // O esqueleto vale para a PRIMEIRA pintura de cada tela. Numa troca de tela
+  // ja carregada, o conteudo anterior fica ate o novo chegar — trocar conteudo
+  // bom por esqueleto seria piorar.
+  if (!window._telaJaPintada) { setConteudo(esqueletoConteudo()); window._telaJaPintada = true; }
   try {
     switch(pagina) {
       case 'home':          await renderHome(); break;
@@ -21781,7 +21899,28 @@ document.addEventListener('click', function(e) {
 // ============================================================
 // INICIALIZAÇÃO
 // ============================================================
+// ── Medicao do carregamento (2026-09-04) ────────────────────────────────
+// Sem numero, discussao de desempenho vira opiniao. Cada etapa marca o tempo
+// e no fim sai uma tabela no console. Custo proximo de zero e fica ligado:
+// quando alguem reclamar de lentidao, a resposta esta na tela dele.
+window.__t0 = performance.now();
+window.__marcas = [];
+function marcaTempo(nome) {
+  window.__marcas.push({ etapa: nome, ms: Math.round(performance.now() - window.__t0) });
+}
+function _relatorioCarregamento() {
+  const nav = performance.getEntriesByType('navigation')[0];
+  const linhas = [...window.__marcas];
+  if (nav) linhas.unshift(
+    { etapa: 'html baixado',     ms: Math.round(nav.responseEnd) },
+    { etapa: 'js compilado',     ms: Math.round(nav.domContentLoadedEventStart) });
+  console.table(linhas);
+  const t = linhas[linhas.length - 1]?.ms;
+  if (t > 3000) console.warn(`[carregamento] ${t}ms ate a tela util — acima do alvo de 3s`);
+}
+
 window.addEventListener('DOMContentLoaded', async () => {
+  marcaTempo('dom pronto');
   const {data:{session}} = await sb.auth.getSession();
   if (session) {
     // O supabase-js mantém a sessão em localStorage por padrão e a
@@ -27007,7 +27146,7 @@ async function exportarRelatorioComparativoPDF() {
   // cache do navegador. Agora o nome do cache deriva de APP_BUILD, que
   // muda a cada publicação, e o activate do sw.js apaga os caches
   // anteriores sozinho.
-  var APP_BUILD = 'h14';
+  var APP_BUILD = 'h15';
   window.APP_BUILD = APP_BUILD;
 
   function _mostrarBannerAtualizacao(){
