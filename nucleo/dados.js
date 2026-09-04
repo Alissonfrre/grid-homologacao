@@ -57,6 +57,12 @@ const _mapLead = (l) => ({
   observacoes: l.observacoes,
   // "parado ha N dias" — dias inteiros desde a entrada na etapa atual
   parado: l.etapa_desde ? Math.floor((Date.now() - new Date(l.etapa_desde)) / 86400000) : null,
+  // As telas do painel medem "parado" a partir de uma data, nao de um numero.
+  // Os dois nomes existem porque as telas usam os dois — e mais barato que
+  // reabrir as telas aprovadas so para uniformizar nome de campo.
+  parado_desde: l.etapa_desde,
+  anotacoes: l.observacoes,
+  virou_cliente: !!l.cliente_id,
   criado_em: l.criado_em
 });
 
@@ -69,7 +75,14 @@ const SEL_LEAD = `*,
 const _mapContato = (c) => ({
   id: c.id, nome: c.nome, cargo: c.cargo, telefone: c.telefone, email: c.email,
   empresa: c.cliente?.nome || null, cliente_id: c.cliente_id,
-  origem: c.origem, principal: c.principal
+  origem: c.origem, principal: c.principal,
+  // 'cliente' quando ja compra; 'lead' quando ainda esta em negociacao. A tela
+  // usa isso para o selo — e a informacao vem do vinculo, nao de um campo que
+  // alguem teria que manter na mao.
+  situacao: c.cliente_id ? 'cliente' : 'lead',
+  // Ultima interacao: existira quando houver WhatsApp. Ate la, a data de
+  // cadastro — a tela mostra "—" quando vem nulo, e mentir uma data seria pior.
+  ultimo: c.criado_em || null
 });
 
 /* WhatsApp ainda nao existe no banco — estas duas colecoes continuam vindo
@@ -108,6 +121,9 @@ export async function listar(colecao, { filtro = {}, ordem = null } = {}) {
       // contato amanha). A ponte entre as duas formas fica aqui.
       return (data || []).map(a => ({
         ...a,
+        titulo: a.assunto,
+        sub: a.descricao,
+        quando: a.vencimento,
         responsavel: a.responsavel?.nome || null,
         lead_id: a.alvo_tipo === 'lead' ? a.alvo_id : null,
         concluida: !!a.concluida_em

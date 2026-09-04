@@ -116,9 +116,21 @@ async function formContato(ponte, redesenhar) {
 /* ── O ponto de entrada que a plataforma chama ────────────────────────────
    Devolve `true` quando tratou. `false` faz a casca avisar que a acao ainda
    nao existe — melhor do que um clique que nao faz nada e nao diz por que. */
+/* Tudo que so existe quando houver gateway de WhatsApp. Tratado aqui, e nao
+   deixado cair no "acao desconhecida", para a mensagem ser a verdadeira: nao e
+   um botao quebrado, e um recurso que ainda nao existe. */
+const DEPENDE_WHATSAPP = ['crm:nova-conversa', 'crm:conversar:', 'crm:ligar:', 'crm:reconectar:',
+  'crm:add-numero', 'crm:horarios', 'crm:respostas', 'crm:importar-contatos', 'crm:anexar',
+  'crm:buscar-conversa', 'crm:caixa:', 'crm:conversa:', 'crm:acesso:', 'crm:enviar'];
+
 export default async function acoes(acao, { redesenhar }) {
   const ponte = (typeof window !== 'undefined' && window.__GRID_PONTE) || {};
   if (!ponte.abrirModal) return false;
+
+  if (DEPENDE_WHATSAPP.some(p => acao === p || acao.startsWith(p))) {
+    ponte.avisar?.('Esta parte depende da integração com WhatsApp, que ainda não foi construída.', 'error');
+    return true;
+  }
   const [, resto] = [acao.split(':')[0], acao.split(':').slice(1).join(':')];
 
   if (acao === 'crm:novo-lead')     { await formLead(ponte, redesenhar); return true; }

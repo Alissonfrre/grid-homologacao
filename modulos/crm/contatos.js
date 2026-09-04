@@ -11,7 +11,12 @@ import { avisoDemo } from './painel.js';
 let _ordem = { campo:'nome', desc:false };
 
 export async function render() {
-  const contatos = await dados.listar('crm_contatos');
+  let contatos = await dados.listar('crm_contatos');
+  if (_busca) {
+    const t = _busca.toLowerCase();
+    contatos = contatos.filter(c => [c.nome, c.empresa, c.cargo, c.telefone]
+      .some(v => (v || '').toLowerCase().includes(t)));
+  }
   const celular  = sessao.ehCelular();
   const comEmpresa = contatos.filter(c => c.empresa).length;
 
@@ -80,7 +85,10 @@ const situacao = (s) => ({
 
 const esteMes = (d) => d && new Date(d).getMonth() === new Date().getMonth();
 
+let _busca = '';
+
 export function acao(nome, valor, redesenhar) {
+  if (nome === 'crm:filtrar-contatos') { _busca = valor || ''; redesenhar(); return true; }
   if (nome === 'ordenar') { _ordem = { campo: valor, desc: !(_ordem.campo === valor && _ordem.desc) }; redesenhar(); return true; }
   return false;
 }

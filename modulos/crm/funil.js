@@ -8,12 +8,20 @@ import * as sessao from '../../nucleo/sessao.js';
 import { ESTAGIOS, rotuloEstagio } from '../../nucleo/estagios.js';
 import { avisoDemo } from './painel.js';
 
+let _busca = '';
 let _visao = 'quadro';                       // 'quadro' | 'tabela'
 let _ordem = { campo:'valor', desc:true };
 let _selecao = [];
 
 export async function render() {
-  const leads = await dados.listar('crm_leads');
+  let leads = await dados.listar('crm_leads');
+  // A busca cobre o que a pessoa tem na cabeca quando procura um negocio:
+  // empresa, treinamento, responsavel e origem.
+  if (_busca) {
+    const t = _busca.toLowerCase();
+    leads = leads.filter(l => [l.empresa, l.treinamento, l.responsavel, l.origem]
+      .some(v => (v || '').toLowerCase().includes(t)));
+  }
   const celular = sessao.ehCelular();
   const visao = celular ? 'lista' : _visao;
 
@@ -120,6 +128,7 @@ const listaCelular = (leads) => ui.lista([...leads]
   })));
 
 export function acao(nome, valor, redesenhar) {
+  if (nome === 'crm:filtrar-leads') { _busca = valor || ''; redesenhar(); return true; }
   if (nome === 'crm:visao') { _visao = _visao === 'quadro' ? 'tabela' : 'quadro'; redesenhar(); return true; }
   if (nome === 'ordenar')   { _ordem = { campo: valor, desc: !(_ordem.campo === valor && _ordem.desc) }; redesenhar(); return true; }
   if (nome === 'sel')       { _selecao = _selecao.includes(valor) ? _selecao.filter(x => x !== valor) : [..._selecao, valor]; redesenhar(); return true; }

@@ -6,13 +6,19 @@ import { ESTAGIOS, rotuloEstagio } from '../../nucleo/estagios.js';
 import { EXEMPLO } from './exemplo.js';
 
 export async function render(params = {}) {
-  const id = params.id || EXEMPLO.crm_leads[0].id;
+  // Sem id na rota nao ha lead: abrir o primeiro do arquivo de demonstracao
+  // dentro do app mostraria um lead que nao existe no banco.
+  const id = params.id;
+  if (!id) return ui.vazio({ titulo:'Nenhum lead selecionado', sub:'Abra um lead pelo funil de vendas.' });
   const lead = await dados.obter('crm_leads', id);
   if (!lead) return ui.vazio({ titulo:'Lead não encontrado', sub:'Ele pode ter sido removido ou pertencer a outra organização.' });
 
   const contato    = lead.contato_id ? await dados.obter('crm_contatos', lead.contato_id) : null;
   const atividades = (await dados.listar('crm_atividades')).filter(a => a.lead_id === id);
-  const trein      = contato?.cliente_id ? EXEMPLO.treinamentos_por_cliente[contato.cliente_id] : null;
+  // Historico de treinamentos do cliente: vira da integracao entre os modulos
+  // (Etapa 5 do plano). Ate la nao ha o que mostrar, e o bloco simplesmente
+  // nao aparece — melhor do que exibir numero inventado ao lado de dado real.
+  const trein      = dados.ehExemplo() && contato?.cliente_id ? EXEMPLO.treinamentos_por_cliente[contato.cliente_id] : null;
   const iAtual     = ESTAGIOS.findIndex(e => e.id === lead.estagio);
 
   return `
