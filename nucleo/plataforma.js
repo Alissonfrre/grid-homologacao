@@ -43,6 +43,10 @@ export const GRID = {
      sem isso, navegacao.abrir() não teria onde escrever. */
   definirContainer(el) { navegacao.definirContainer(el); },
 
+  /* Os módulos carregados, na ordem em que entraram. A casca usa para montar
+     um bloco de menu por módulo. */
+  modulos() { return navegacao.registrados(); },
+
   /* Itens de menu de todos os módulos carregados, já filtrados pelo perfil e
      pelo que faz sentido no aparelho atual. A casca acrescenta ao menu dela;
      quem decide o que existe continua sendo o manifesto de cada módulo. */

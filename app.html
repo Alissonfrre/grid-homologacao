@@ -982,6 +982,26 @@ body.modo-suporte-ativo .sino-painel{top:calc(60px + var(--suporte-h,34px))}
 .turma-tabela .tt-semhora{color:var(--atencao-text);font-weight:600;margin-left:4px;font-size:11.5px}
 .turma-tabela .tt-semdata{color:var(--atencao-text);font-weight:600}
 .turma-card-semdata{color:var(--atencao-text)!important;font-weight:600}
+/* ── Menu em blocos de modulo (2026-09-04, mockup aprovado) ─────────────
+   So entra em cena quando a organizacao tem modulo alem do Treinamentos.
+   Com um modulo so, um cabecalho de bloco nao organiza nada — o menu
+   classico continua identico, e e por isso que producao nao muda. */
+.mod-head{display:flex;align-items:center;gap:9px;padding:9px 12px;margin:10px 10px 3px;border-radius:var(--r-md);cursor:pointer;color:rgba(255,255,255,.72);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;user-select:none}
+.mod-head:hover{background:rgba(255,255,255,.06)}
+.mod-bloco.aberto .mod-head{color:#fff}
+.mod-head .mh-ic{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.mod-head .mh-ic svg{width:15px;height:15px}
+.mod-head .cnt{background:var(--amber);color:var(--navy);font-size:10px;font-weight:700;border-radius:999px;padding:1px 6px;margin-left:auto}
+.mod-head .seta{margin-left:auto;display:inline-flex;color:rgba(255,255,255,.4);transition:transform .15s}
+.mod-head .seta svg{width:13px;height:13px}
+.mod-bloco.aberto .mod-head .seta{transform:rotate(90deg)}
+.mod-bloco .mod-itens{display:none;padding:0 10px}
+.mod-bloco.aberto .mod-itens{display:block}
+/* Menu recolhido: o cabecalho vira so o icone e os itens continuam visiveis —
+   senao o modo mini esconderia telas inteiras atras de um bloco fechado. */
+body.sidebar-mini .mod-head{justify-content:center;padding:9px 0;margin:8px 6px 2px;font-size:0;letter-spacing:0}
+body.sidebar-mini .mod-head .seta,body.sidebar-mini .mod-head .cnt{display:none}
+body.sidebar-mini .mod-bloco .mod-itens{display:block}
 /* contexto do encontro na tela de execucao (2026-09-04) */
 .exec-contexto{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px 18px;background:var(--gray-50);border:1px solid var(--border);border-radius:var(--r-md);padding:12px 16px;margin-bottom:16px}
 .exec-ctx-i.wide{grid-column:1/-1}
@@ -2106,23 +2126,35 @@ function _filtrarMenuLateral(termo) {
   const t = _normalizarBusca(termo);
   const clearBtn = document.getElementById('menuFiltroClear');
   if (clearBtn) clearBtn.style.display = t ? 'flex' : 'none';
+  const nav = document.getElementById('sidebarNav');
+  if (!nav) return;
 
-  let secaoAtual = null;
-  let secaoTemVisivel = false;
-  document.querySelectorAll('#sidebarNav > *').forEach(el => {
-    if (el.classList.contains('sidebar-section-label')) {
-      if (secaoAtual) secaoAtual.style.display = secaoTemVisivel ? '' : 'none';
-      secaoAtual = el;
-      secaoTemVisivel = false;
-      return;
-    }
-    if (el.classList.contains('sidebar-item')) {
-      const visivel = !t || _normalizarBusca(el.dataset.label).includes(t);
-      el.style.display = visivel ? '' : 'none';
-      if (visivel) secaoTemVisivel = true;
-    }
+  nav.querySelectorAll('.sidebar-item').forEach(el => {
+    el.style.display = (!t || _normalizarBusca(el.dataset.label || '').includes(t)) ? '' : 'none';
   });
-  if (secaoAtual) secaoAtual.style.display = secaoTemVisivel ? '' : 'none';
+
+  // Blocos de modulo: enquanto se filtra eles ficam ABERTOS — senao o
+  // resultado da busca ficaria escondido dentro de um bloco fechado — e somem
+  // quando nada sobra dentro. Ao limpar a busca, voltam ao estado do usuario.
+  nav.querySelectorAll('.mod-bloco').forEach(b => {
+    const temVisivel = [...b.querySelectorAll('.sidebar-item')].some(el => el.style.display !== 'none');
+    b.style.display = temVisivel ? '' : 'none';
+    b.classList.toggle('aberto', t ? true : b.dataset.aberto === '1');
+  });
+
+  // Rotulos de secao do menu classico: somem junto com a secao inteira.
+  let secao = null, secaoTemVisivel = false;
+  [...nav.children].forEach(el => {
+    if (el.classList.contains('sidebar-section-label')) {
+      if (secao) secao.style.display = secaoTemVisivel ? '' : 'none';
+      secao = el; secaoTemVisivel = false; return;
+    }
+    if (el.querySelector && el.querySelector('.sidebar-item')) {
+      if ([...el.querySelectorAll('.sidebar-item')].some(x => x.style.display !== 'none')) secaoTemVisivel = true;
+    }
+    if (el.classList.contains('sidebar-item') && el.style.display !== 'none') secaoTemVisivel = true;
+  });
+  if (secao) secao.style.display = secaoTemVisivel ? '' : 'none';
 }
 
 function _limparFiltroMenu() {
@@ -3671,12 +3703,7 @@ function _injetarMenuDosModulos() {
   const nav = NAV[perfil];
   if (!nav) return;
   const iConta = nav.findIndex(i => i.sec === 'Conta');
-  // Os nomes de icone do modulo (icones.js) nao sao os do app (ICONS). Este
-  // mapa e a traducao — pequeno de proposito: quando um icone novo aparecer
-  // sem tradução, cai no de grafico em vez de sumir da tela.
-  const ICONE_APP = { trend:'chart', chat:'mail', funnel:'target', user:'user',
-                      activity:'clock', phone:'phone' };
-  const bloco = [{ sec: 'CRM' }, ...itens.map(i => ({ id: i.id, l: i.rotulo, icon: ICONE_APP[i.icone] || 'chart' }))];
+  const bloco = [{ sec: 'CRM' }, ...itens.map(i => ({ id: i.id, l: i.rotulo, icon: ICONE_MODULO_APP[i.icone] || 'chart' }))];
   if (iConta >= 0) nav.splice(iConta, 0, ...bloco); else nav.push(...bloco);
   itens.forEach(i => { TITULOS[i.id] = i.rotulo; });
 }
@@ -3688,15 +3715,97 @@ function _perfilTemAcesso(pagina) {
   return itens.some(i => i.id === pagina);
 }
 
+// ══════════════════════════════════════════════════════════════════════════
+// MENU LATERAL — clássico ou em blocos de módulo (2026-09-04)
+// ------------------------------------------------------------------------
+// Duas formas, e a escolha é automática:
+//   • organização SEM módulo além do Treinamentos → menu clássico, idêntico
+//     ao que está em produção. Com um módulo só, um cabeçalho de bloco não
+//     organiza nada — só acrescenta um clique.
+//   • organização COM módulo (hoje, CRM) → menu em blocos, como no mockup
+//     aprovado: Início solto no topo, um bloco por módulo que abre e fecha,
+//     e Configurações no rodapé.
+// Isso é o que permite entregar a navegação nova sem mexer na aparência de
+// quem só tem Treinamentos — inclusive o cliente que está em produção.
+// ------------------------------------------------------------------------
+// Quais itens vão para "Configurações". O resto do menu antigo (Turmas,
+// Clientes, Catálogo…) é o módulo de Treinamentos, ainda que ele não seja um
+// módulo de verdade no código — é a leitura correta do ponto de vista de quem
+// usa, e é o que o mockup mostra.
+const MENU_CONFIG_IDS = ['equipe', 'conta'];
+
+// Os nomes de icone dos modulos (nucleo/icones.js) nao sao os do app (ICONS).
+// Este mapa e a traducao — pequeno de proposito: icone novo sem traducao cai
+// no de grafico em vez de sumir da tela.
+const ICONE_MODULO_APP = { trend:'chart', chat:'mail', funnel:'target', user:'user',
+                           activity:'clock', phone:'phone' };
+
+// O ICONS do app nao tem chevron; desenhar aqui evita reaproveitar a seta de
+// "voltar" girada, que fica torta em tamanho pequeno.
+const SETA_BLOCO = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>';
+
+function _itemMenuHtml(i) {
+  return `<div class="sidebar-item" id="si-${i.id}" data-nav="${i.id}" data-label="${i.l}"><span class="si-icon">${ICONS[i.icon]||''}</span><span class="si-label">${i.l}</span></div>`;
+}
+
+function _blocoMenuHtml(id, nome, icone, itens, aberto) {
+  return `<div class="mod-bloco${aberto?' aberto':''}" data-mod="${id}" data-aberto="${aberto?'1':'0'}">
+    <div class="mod-head" onclick="_toggleBlocoMenu('${id}')" title="${nome}">
+      <span class="mh-ic">${ICONS[icone]||''}</span>${nome}
+      <span class="seta">${SETA_BLOCO}</span>
+    </div>
+    <div class="mod-itens">${itens.map(_itemMenuHtml).join('')}</div>
+  </div>`;
+}
+
+function _toggleBlocoMenu(id) {
+  document.querySelectorAll(`.mod-bloco[data-mod="${id}"]`).forEach(b => {
+    const abrir = !b.classList.contains('aberto');
+    b.classList.toggle('aberto', abrir);
+    b.dataset.aberto = abrir ? '1' : '0';
+  });
+  try { localStorage.setItem('tl_menu_bloco_' + id, document.querySelector(`.mod-bloco[data-mod="${id}"]`)?.dataset.aberto || '1'); } catch(e) {}
+}
+
+function _blocoAberto(id, padrao) {
+  try { const v = localStorage.getItem('tl_menu_bloco_' + id); return v === null ? padrao : v === '1'; } catch(e) { return padrao; }
+}
+
+function _htmlMenuLateral(itens) {
+  const idsDeModulo = {};                       // id do item → id do módulo
+  if (_GRID) for (const item of _GRID.itensDeMenu(usuarioAtual.perfil)) idsDeModulo[item.id] = item.modulo;
+  const temModulo = Object.keys(idsDeModulo).length > 0;
+
+  // Sem módulo: exatamente o menu de sempre, sem uma linha de diferença.
+  if (!temModulo) {
+    return itens.map(i => i.sec
+      ? `<div class="sidebar-section-label">${i.sec}</div>`
+      : _itemMenuHtml(i)).join('');
+  }
+
+  const soItens = itens.filter(i => i.id);
+  const inicio  = soItens.filter(i => i.id === 'home');
+  const config  = soItens.filter(i => MENU_CONFIG_IDS.includes(i.id));
+  const base    = soItens.filter(i => i.id !== 'home' && !MENU_CONFIG_IDS.includes(i.id) && !idsDeModulo[i.id]);
+
+  const blocos = [];
+  if (base.length) blocos.push(_blocoMenuHtml('treinamentos', 'Treinamentos', 'clip', base, _blocoAberto('treinamentos', true)));
+  for (const mod of _GRID.modulos()) {
+    const seus = soItens.filter(i => idsDeModulo[i.id] === mod.id);
+    if (seus.length) blocos.push(_blocoMenuHtml(mod.id, mod.nome, ICONE_MODULO_APP[mod.icone] || 'chart', seus, _blocoAberto(mod.id, true)));
+  }
+
+  return `<div style="padding:0 10px">${inicio.map(_itemMenuHtml).join('')}</div>
+    ${blocos.join('')}
+    ${config.length ? `<div class="sidebar-section-label">Configurações</div><div style="padding:0 10px">${config.map(_itemMenuHtml).join('')}</div>` : ''}`;
+}
+
 function configurarNavegacao() {
   const perfil = usuarioAtual.perfil;
   const itens  = NAV[perfil] || [];
   const bottom = NAV_BOTTOM[perfil] || [];
 
-  document.getElementById('sidebarNav').innerHTML = itens.map(i=>{
-    if (i.sec) return `<div class="sidebar-section-label">${i.sec}</div>`;
-    return `<div class="sidebar-item" id="si-${i.id}" data-nav="${i.id}" data-label="${i.l}"><span class="si-icon">${ICONS[i.icon]||''}</span><span class="si-label">${i.l}</span><span class="si-badge" id="sib-${i.id}" style="display:none"></span></div>`;
-  }).join('');
+  document.getElementById('sidebarNav').innerHTML = _htmlMenuLateral(itens);
   // Menu recém-renderizado (troca de perfil/login) — limpa o campo de busca
   // e garante que nenhum item fique escondido por um filtro de uma sessão
   // anterior.
@@ -26840,7 +26949,7 @@ async function exportarRelatorioComparativoPDF() {
   // cache do navegador. Agora o nome do cache deriva de APP_BUILD, que
   // muda a cada publicação, e o activate do sw.js apaga os caches
   // anteriores sozinho.
-  var APP_BUILD = 'h11';
+  var APP_BUILD = 'h12';
   window.APP_BUILD = APP_BUILD;
 
   function _mostrarBannerAtualizacao(){
