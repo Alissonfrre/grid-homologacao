@@ -43,6 +43,17 @@ export const GRID = {
      sem isso, navegacao.abrir() não teria onde escrever. */
   definirContainer(el) { navegacao.definirContainer(el); },
 
+  /* Traduz uma ação declarada por uma tela em comportamento. Devolve false
+     quando ninguém respondeu — a casca avisa, em vez de fingir que fez. */
+  async tratarAcao(acao) { return navegacao.tratarAcao(acao); },
+
+  /* A casca informa como navegar e como abrir modal/aviso. Sem isto, o módulo
+     teria que conhecer o app por dentro — que é exatamente o que a plataforma
+     existe para evitar. */
+  aoNavegar(fn) { navegacao.aoNavegar(fn); },
+  ponte: {},
+  definirPonte(p) { Object.assign(this.ponte, p); if (typeof window !== 'undefined') window.__GRID_PONTE = this.ponte; },
+
   /* Os módulos carregados, na ordem em que entraram. A casca usa para montar
      um bloco de menu por módulo. */
   modulos() { return navegacao.registrados(); },

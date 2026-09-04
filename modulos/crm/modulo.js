@@ -9,8 +9,13 @@
    RESTRICTIVE no banco.
    ══════════════════════════════════════════════════════════════════════════ */
 
+import acoes from './acoes.js';
+
 export default {
   id: 'crm',
+  /* Onde as acoes declaradas pelas telas viram escrita. A plataforma chama
+     isto quando a propria tela nao tratou a acao. */
+  acoes,
   nome: 'CRM',
   icone: 'funnel',
   css: './modulos/crm/crm.css',

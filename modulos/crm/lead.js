@@ -21,6 +21,7 @@ export async function render(params = {}) {
     titulo:`${lead.empresa} — ${lead.treinamento} (${lead.vagas} vagas)`,
     sub:`Responsável ${lead.responsavel || 'não definido'} · ${ui.fmt.moeda(lead.valor)}`,
     acoes:[
+      { rotulo:'Editar', icone:'edit', tipo:'sec', acao:`crm:editar-lead:${id}` },
       { rotulo:'Marcar perdido', tipo:'sec', acao:`crm:perdido:${id}` },
       { rotulo:'Marcar ganho', icone:'check', tipo:'pri', acao:`crm:ganho:${id}` }
     ]

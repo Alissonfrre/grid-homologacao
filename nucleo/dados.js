@@ -103,7 +103,15 @@ export async function listar(colecao, { filtro = {}, ordem = null } = {}) {
         .select('*, responsavel:usuarios!crm_atividades_responsavel_id_fkey(nome)')
         .eq('org_id', sessao.orgId()).is('excluido_em', null).order('vencimento');
       if (error) throw error;
-      return (data || []).map(a => ({ ...a, responsavel: a.responsavel?.nome || null }));
+      // A tela do lead filtra por `lead_id`; o banco guarda alvo_tipo/alvo_id,
+      // que e generico de proposito (uma atividade pode apontar para cliente ou
+      // contato amanha). A ponte entre as duas formas fica aqui.
+      return (data || []).map(a => ({
+        ...a,
+        responsavel: a.responsavel?.nome || null,
+        lead_id: a.alvo_tipo === 'lead' ? a.alvo_id : null,
+        concluida: !!a.concluida_em
+      }));
     }
   }
   if (_origem === 'exemplo' || SO_EXEMPLO.includes(colecao)) {
@@ -155,3 +163,129 @@ export async function gravar(colecao, registro) {
 /* A tabela `clientes` é do núcleo e compartilhada com o Treinamentos.
    O CRM lê; nunca altera a estrutura dela. */
 export async function clientes() { return listar('clientes', { ordem: { campo: 'nome' } }); }
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ESCRITA DO CRM
+   As telas falam a lingua delas (slug da etapa, nome do responsavel); o banco
+   fala a dele (etapa_id, responsavel_id). A traducao de volta acontece aqui,
+   pelo mesmo motivo da traducao de leitura: uma tela nao deve saber a forma
+   do banco.
+
+   `org_id` nunca vem do formulario — e sempre da sessao. Mesmo que viesse, a
+   RLS recusaria; mas mandar o campo certo daqui evita erro confuso na tela.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+let _funil = null;   // {id, etapas:[...]} — uma consulta por sessao
+
+export async function funilPadrao() {
+  if (_origem !== 'banco') return null;
+  if (_funil) return _funil;
+  const { data: f, error: e1 } = await _sb.from('crm_funis')
+    .select('id').eq('org_id', sessao.orgId()).eq('padrao', true).maybeSingle();
+  if (e1) throw e1;
+  if (!f) throw new Error('Esta organização ainda não tem um funil configurado.');
+  const { data: et, error: e2 } = await _sb.from('crm_funil_etapas')
+    .select('id, slug, nome, tipo, ordem').eq('funil_id', f.id).order('ordem');
+  if (e2) throw e2;
+  _funil = { id: f.id, etapas: et || [] };
+  return _funil;
+}
+
+const _etapaPorSlug = (funil, slug) => funil.etapas.find(e => e.slug === slug) || funil.etapas[0];
+
+/* Pessoas da organizacao que podem responder por um lead. O CRM e comercial:
+   instrutor nao entra na lista. */
+export async function responsaveis() {
+  if (_origem !== 'banco') return [];
+  const { data, error } = await _sb.from('usuarios')
+    .select('id, nome, perfil').eq('org_id', sessao.orgId()).eq('ativo', true).order('nome');
+  if (error) throw error;
+  return (data || []).filter(u => ['administrador', 'comercial'].includes(u.perfil));
+}
+
+export async function salvarLead(form) {
+  const funil = await funilPadrao();
+  const linha = {
+    org_id: sessao.orgId(),
+    funil_id: funil.id,
+    etapa_id: _etapaPorSlug(funil, form.estagio || 'novo').id,
+    empresa: (form.empresa || '').trim(),
+    vagas: form.vagas ? Number(form.vagas) : null,
+    valor: form.valor === '' || form.valor == null ? null : Number(form.valor),
+    origem: form.origem || null,
+    responsavel_id: form.responsavel_id || null,
+    catalogo_id: form.catalogo_id || null,
+    treinamento_livre: form.treinamento_livre || null,
+    observacoes: form.observacoes || null
+  };
+  if (!linha.empresa) throw new Error('Informe a empresa.');
+  const q = form.id
+    ? _sb.from('crm_leads').update(linha).eq('id', form.id).select('id').single()
+    : _sb.from('crm_leads').insert(linha).select('id').single();
+  const { data, error } = await q;
+  if (error) throw error;
+  return data;
+}
+
+export async function moverLead(id, slug) {
+  const funil = await funilPadrao();
+  const { error } = await _sb.from('crm_leads')
+    .update({ etapa_id: _etapaPorSlug(funil, slug).id }).eq('id', id);
+  if (error) throw error;
+  return true;
+}
+
+/* Exclusao reversivel: a linha continua no banco e o historico registra. */
+export async function excluirLead(id) {
+  const { error } = await _sb.from('crm_leads')
+    .update({ excluido_em: new Date().toISOString() }).eq('id', id);
+  if (error) throw error;
+  return true;
+}
+
+export async function salvarAtividade(form) {
+  const linha = {
+    org_id: sessao.orgId(),
+    tipo: form.tipo || 'tarefa',
+    assunto: (form.assunto || '').trim(),
+    descricao: form.descricao || null,
+    vencimento: form.vencimento || null,
+    responsavel_id: form.responsavel_id || null,
+    alvo_tipo: form.alvo_tipo || null,
+    alvo_id: form.alvo_id || null
+  };
+  if (!linha.assunto) throw new Error('Informe o assunto.');
+  const q = form.id
+    ? _sb.from('crm_atividades').update(linha).eq('id', form.id).select('id').single()
+    : _sb.from('crm_atividades').insert(linha).select('id').single();
+  const { data, error } = await q;
+  if (error) throw error;
+  return data;
+}
+
+export async function concluirAtividade(id, concluir = true) {
+  const { error } = await _sb.from('crm_atividades')
+    .update({ concluida_em: concluir ? new Date().toISOString() : null }).eq('id', id);
+  if (error) throw error;
+  return true;
+}
+
+export async function salvarContato(form) {
+  const linha = {
+    org_id: sessao.orgId(),
+    nome: (form.nome || '').trim(),
+    cargo: form.cargo || null,
+    telefone: form.telefone || null,
+    email: form.email || null,
+    cliente_id: form.cliente_id || null,
+    origem: form.origem || null
+  };
+  if (!linha.nome) throw new Error('Informe o nome.');
+  const q = form.id
+    ? _sb.from('contatos').update(linha).eq('id', form.id).select('id').single()
+    : _sb.from('contatos').insert(linha).select('id').single();
+  const { data, error } = await q;
+  if (error) throw error;
+  return data;
+}

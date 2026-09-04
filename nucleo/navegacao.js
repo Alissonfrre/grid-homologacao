@@ -106,6 +106,20 @@ export function rota(id) {
 
 export const rotaAtual = () => _rotaAtual;
 
+/* A tela aberta agora — e quem recebe as acoes declaradas por ela. */
+let _telaAberta = null, _paramsAtuais = {};
+export const telaAberta = () => _telaAberta;
+
+/* Redesenha a tela atual sem passar pelo roteador: usado depois de uma
+   gravacao, para a lista refletir o que acabou de mudar sem piscar a tela
+   inteira nem perder a rota. */
+export async function redesenhar() {
+  if (!_telaAberta) return false;
+  _destino()(await _telaAberta.render(_paramsAtuais));
+  if (_telaAberta.depois) _telaAberta.depois(_paramsAtuais);
+  return true;
+}
+
 /* Abre uma tela de módulo. Devolve false quando a rota não é de módulo —
    assim o roteador do app segue para o comportamento atual dele. */
 export async function abrir(id, params = {}) {
@@ -128,6 +142,8 @@ export async function abrir(id, params = {}) {
       return true;
     }
     const tela = await item.rota();
+    _telaAberta = tela;
+    _paramsAtuais = params;
     alvo(await tela.render(params));
     if (tela.depois) tela.depois(params);
   } catch (e) {
@@ -140,6 +156,43 @@ export async function abrir(id, params = {}) {
 /* Onde desenhar: dentro do app real usa setConteudo (DOM duplo);
    fora dele, um contêiner informado em iniciar(). */
 let _container = null;
+/* ── Despachante de acoes ──────────────────────────────────────────────────
+   Os modulos so declaram `data-acao="nome:valor"`. Quem traduz isso em
+   comportamento e este ponto, e mais ninguem — e o que impede cada tela de
+   inventar o proprio jeito de tratar clique.
+
+   Ordem de tentativa:
+     1. `ir:rota[:id]`      → navegacao do app (callback informado pela casca)
+     2. a tela aberta       → acao(nome, valor, redesenhar)
+     3. o modulo da rota    → acoes(acao, contexto)  — e onde mora a escrita
+   Nada respondeu: devolve false, e a casca avisa em vez de fingir que fez. */
+let _aoNavegar = null;
+export function aoNavegar(fn) { _aoNavegar = fn; }
+
+export async function tratarAcao(acao) {
+  if (!acao) return false;
+  const [nome, ...resto] = acao.split(':');
+  const valor = resto.join(':');
+
+  if (nome === 'ir') {
+    const [rota, id] = valor.split(':');
+    if (_aoNavegar) { await _aoNavegar(rota, id ? { id } : {}); return true; }
+    return abrir(rota, id ? { id } : {});
+  }
+
+  if (_telaAberta?.acao) {
+    const tratou = await _telaAberta.acao(nome === 'crm' ? acao : nome, valor, redesenhar);
+    if (tratou) return true;
+  }
+
+  const mod = _moduloAberto ? _modulos.get(_moduloAberto) : null;
+  if (mod?.acoes) {
+    const tratou = await mod.acoes(acao, { redesenhar, rota: _rotaAtual, params: _paramsAtuais });
+    if (tratou) return true;
+  }
+  return false;
+}
+
 export function definirContainer(el) { _container = el; }
 function _destino() {
   if (typeof window !== 'undefined' && typeof window.setConteudo === 'function') return window.setConteudo;

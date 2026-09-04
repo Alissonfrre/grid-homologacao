@@ -3659,6 +3659,25 @@ async function _iniciarPlataforma() {
       document.head.appendChild(l);
     }
     const nucleo = await import('./nucleo/plataforma.js?v=' + APP_BUILD);
+
+    // A PONTE. O modulo nao conhece o app: quando ele precisa de modal, aviso
+    // ou confirmacao, pede por aqui. E o que permite a mesma tela rodar dentro
+    // do app e no demo.html sem uma linha diferente — e o que impede o modulo
+    // de chamar abrirModal() direto e ficar preso a este arquivo.
+    nucleo.GRID.definirPonte({
+      abrirModal: (titulo, corpo, rodape) => abrirModal(titulo, corpo, rodape),
+      fecharModal,
+      avisar: (msg, tipo) => showToast(msg, tipo === 'error' ? 'error' : 'success'),
+      confirmar: (msg) => confirmarAcao(msg, 'Confirmar', true),
+      botoes: (rotulo, id) => `<button class="btn btn-outline" onclick="fecharModal()">Cancelar</button>
+        <button class="btn btn-navy" id="${id}">${rotulo}</button>`,
+      aoConfirmar: (id, fn) => {
+        const b = document.getElementById(id);
+        if (!b) return;
+        b.onclick = async () => { b.disabled = true; try { await fn(); } finally { b.disabled = false; } };
+      }
+    });
+    nucleo.GRID.aoNavegar((rota, params) => irPara(rota, params));
     const dados  = await import('./nucleo/dados.js?v=' + APP_BUILD);
     const sessao = await import('./nucleo/sessao.js?v=' + APP_BUILD);
     sessao.iniciar({
@@ -3685,10 +3704,48 @@ async function _iniciarPlataforma() {
     // quando ele existe, que e o caso aqui — e o mesmo caminho de todas as
     // telas do app, com o DOM duplo tratado num lugar so.
     _GRID = nucleo.GRID;
+    _ligarAcoesDeModulo();
   } catch (e) {
     console.error('[modulos] CRM nao carregou:', e);
     _GRID = null;              // sem modulo, o app segue como sempre foi
   }
+}
+
+// ── Acoes das telas de modulo ────────────────────────────────────────────
+// As telas dos modulos so declaram `data-acao="nome:valor"`. Estes dois
+// ouvintes sao a unica ligacao entre esse contrato e o app; quem traduz acao
+// em comportamento e a plataforma (navegacao.tratarAcao), nao este arquivo.
+// Delegados no document e registrados uma vez so — as telas sao redesenhadas
+// inteiras a cada acao, entao ouvinte preso a elemento morreria no primeiro
+// redesenho.
+let _acoesLigadas = false;
+function _ligarAcoesDeModulo() {
+  if (_acoesLigadas) return;
+  _acoesLigadas = true;
+
+  const dentroDeModulo = (el) => el.closest('#mainBody, #mobileBody');
+
+  document.addEventListener('click', async (ev) => {
+    if (!_GRID) return;
+    const el = ev.target.closest('[data-acao]');
+    if (!el || !dentroDeModulo(el) || el.tagName === 'SELECT' || el.tagName === 'INPUT') return;
+    const acao = el.dataset.acao;
+    if (!acao) return;
+    ev.preventDefault();
+    const tratou = await _GRID.tratarAcao(acao);
+    // Acao declarada e sem tratador: avisa em vez de nao fazer nada. Um clique
+    // que nao responde e pior do que um "ainda nao existe".
+    if (!tratou) showToast('Esta ação ainda não está pronta: ' + acao, 'error');
+  });
+
+  document.addEventListener('change', async (ev) => {
+    if (!_GRID) return;
+    const el = ev.target.closest('[data-acao]');
+    if (!el || !dentroDeModulo(el)) return;
+    if (el.tagName !== 'SELECT' && el.type !== 'search') return;
+    const acao = el.dataset.acao;
+    if (acao) await _GRID.tratarAcao(acao + ':' + el.value);
+  });
 }
 
 // Itens de menu do CRM, injetados em NAV so quando o modulo esta ativo E o
@@ -3909,6 +3966,7 @@ async function irPara(pagina, params={}) {
       case 'conta':         await renderConta(); break;
       // Rota de modulo: se algum modulo carregado responde por esta pagina,
       // ele desenha. Só cai em "em breve" quando ninguem responde.
+      // (o despachante de acoes das telas de modulo esta em _ligarAcoesDeModulo)
       default:
         if (_GRID && await _GRID.abrir(pagina, params)) break;
         renderEmBreve(TITULOS[pagina]||pagina);
@@ -26949,7 +27007,7 @@ async function exportarRelatorioComparativoPDF() {
   // cache do navegador. Agora o nome do cache deriva de APP_BUILD, que
   // muda a cada publicação, e o activate do sw.js apaga os caches
   // anteriores sozinho.
-  var APP_BUILD = 'h12';
+  var APP_BUILD = 'h13';
   window.APP_BUILD = APP_BUILD;
 
   function _mostrarBannerAtualizacao(){
