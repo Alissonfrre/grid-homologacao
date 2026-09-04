@@ -3595,16 +3595,18 @@ let _GRID = null;
 let _modulosAtivos = [];
 
 async function _carregarModulosDaOrg() {
-  if (!usuarioAtual.org_id) return [];   // provedor nao tem organizacao
+  if (!usuarioAtual.org_id) { console.info('[modulos] sem org_id (provedor)'); return []; }
   try {
     const { data, error } = await sb.from('organizacoes_modulos')
       .select('modulo').eq('org_id', usuarioAtual.org_id).eq('ativo', true);
     if (error) throw error;
-    return (data || []).map(m => m.modulo);
+    const ids = (data || []).map(m => m.modulo);
+    console.info('[modulos] contratados:', ids);
+    return ids;
   } catch (e) {
     // Organizacao sem a tabela (banco antigo) ou consulta barrada: segue sem
     // modulo nenhum. Treinamentos continua inteiro — ele nao passa por aqui.
-    console.warn('[modulos] nao foi possivel ler organizacoes_modulos:', e?.message);
+    console.warn('[modulos] nao foi possivel ler organizacoes_modulos:', e?.message || e);
     return [];
   }
 }
@@ -3625,8 +3627,17 @@ async function _iniciarPlataforma() {
     // mesmo com o banco ligado (ver SO_EXEMPLO em nucleo/dados.js).
     const { EXEMPLO } = await import('./modulos/crm/exemplo.js?v=' + APP_BUILD);
     dados.iniciar({ sb, origem: 'banco', exemplo: EXEMPLO });
-    await dados.carregarEtapas();
-    await nucleo.GRID.carregarModulos(_modulosAtivos.filter(m => m !== 'treinamentos'), APP_BUILD);
+    console.info('[modulos] nucleo carregado');
+
+    // As etapas vem do banco, mas a falta delas NAO pode derrubar o modulo:
+    // nucleo/estagios.js ja traz a lista padrao, e o CRM abre com ela. Antes
+    // esta linha estava dentro do try geral, entao um erro aqui apagava o menu
+    // inteiro — falha desproporcional ao problema.
+    try { await dados.carregarEtapas(); console.info('[modulos] etapas do banco'); }
+    catch (e) { console.warn('[modulos] etapas: usando a lista padrao —', e?.message || e); }
+
+    const carregados = await nucleo.GRID.carregarModulos(_modulosAtivos.filter(m => m !== 'treinamentos'), APP_BUILD);
+    console.info('[modulos] carregados:', carregados.map(m => m.id));
     // Onde o modulo desenha: navegacao._destino() ja usa window.setConteudo
     // quando ele existe, que e o caso aqui — e o mesmo caminho de todas as
     // telas do app, com o DOM duplo tratado num lugar so.
@@ -3641,9 +3652,10 @@ async function _iniciarPlataforma() {
 // perfil tem direito. Vem do proprio manifesto do modulo (modulo.js) — este
 // arquivo nao mantem uma segunda lista para desatualizar.
 function _injetarMenuDosModulos() {
-  if (!_GRID) return;
+  if (!_GRID) { console.info('[modulos] nenhum modulo ativo — menu padrao'); return; }
   const perfil = usuarioAtual.perfil;
   const itens = _GRID.itensDeMenu(perfil);
+  console.info('[modulos] itens de menu para', perfil, ':', itens.map(i => i.id));
   if (!itens.length) return;
   const nav = NAV[perfil];
   if (!nav) return;
@@ -26817,7 +26829,7 @@ async function exportarRelatorioComparativoPDF() {
   // cache do navegador. Agora o nome do cache deriva de APP_BUILD, que
   // muda a cada publicação, e o activate do sw.js apaga os caches
   // anteriores sozinho.
-  var APP_BUILD = 'h9';
+  var APP_BUILD = 'h10';
   window.APP_BUILD = APP_BUILD;
 
   function _mostrarBannerAtualizacao(){
