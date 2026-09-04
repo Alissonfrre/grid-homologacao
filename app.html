@@ -3615,6 +3615,17 @@ async function _iniciarPlataforma() {
   _modulosAtivos = await _carregarModulosDaOrg();
   if (!_modulosAtivos.includes('crm')) return;
   try {
+    // O CSS dos componentes dos modulos (ui.js) e o tamanho dos icones vivem
+    // no aditivo do design system. Sem ele, `.ico` fica sem width/height e um
+    // SVG ocupa a tela inteira — foi o que aconteceu no h10. Carregado uma vez
+    // so, e so quando ha modulo: quem nao tem CRM nao baixa nada.
+    if (!document.getElementById('cssDesignSystemAditivo')) {
+      const l = document.createElement('link');
+      l.id = 'cssDesignSystemAditivo';
+      l.rel = 'stylesheet';
+      l.href = './nucleo/design-system-aditivo.css?v=' + APP_BUILD;
+      document.head.appendChild(l);
+    }
     const nucleo = await import('./nucleo/plataforma.js?v=' + APP_BUILD);
     const dados  = await import('./nucleo/dados.js?v=' + APP_BUILD);
     const sessao = await import('./nucleo/sessao.js?v=' + APP_BUILD);
@@ -26829,7 +26840,7 @@ async function exportarRelatorioComparativoPDF() {
   // cache do navegador. Agora o nome do cache deriva de APP_BUILD, que
   // muda a cada publicação, e o activate do sw.js apaga os caches
   // anteriores sozinho.
-  var APP_BUILD = 'h10';
+  var APP_BUILD = 'h11';
   window.APP_BUILD = APP_BUILD;
 
   function _mostrarBannerAtualizacao(){
