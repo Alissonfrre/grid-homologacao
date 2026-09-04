@@ -933,6 +933,82 @@ body.modo-suporte-ativo .sino-painel{top:calc(60px + var(--suporte-h,34px))}
 .turma-linha-lista .tl-status{display:flex;align-items:center;gap:5px;justify-content:flex-end;min-width:0}
 .turma-linha-lista .tl-pend{font-size:12px;flex-shrink:0;line-height:1}
 .turma-linha-lista .tl-badge{font-size:9px;font-weight:700;padding:3px 8px;border-radius:999px;text-align:center;white-space:nowrap}
+/* ══════════════════════════════════════════════════════════════════════════
+   TURMAS — tabela, faixa de pendencias e marca de pendencia (2026-09-04)
+   As classes .turma-lista-head/.turma-linha-lista acima ficam sem uso na
+   Lista; nao foram removidas de proposito, para a visao Cards (desativada,
+   nao apagada) continuar podendo voltar sem depender desta rodada.
+   ══════════════════════════════════════════════════════════════════════════ */
+:root{--atencao:#B45309;--atencao-l:#FEF3C7;--atencao-text:#92400E}
+
+/* ── faixa de pendencias ── */
+.turmas-faixa-pend{display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-radius:var(--r-md);background:var(--atencao-l);border:1px solid rgba(180,83,9,.28);margin:0 0 12px;flex-wrap:wrap}
+.turmas-faixa-pend .tfx-ic{color:var(--atencao);flex-shrink:0;font-size:21px;line-height:0;padding-top:2px}
+.turmas-faixa-pend .tfx-tx{flex:1;min-width:200px}
+.turmas-faixa-pend .t1{font-size:13.5px;font-weight:700;color:var(--atencao-text);line-height:1.4}
+.turmas-faixa-pend .t2{font-size:12px;color:var(--atencao-text);opacity:.85;margin-top:2px}
+.turmas-faixa-pend .tfx-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+.turmas-faixa-pend .tfx-chip{font-family:inherit;font-size:11.5px;font-weight:700;padding:5px 11px;border-radius:999px;border:1px solid rgba(180,83,9,.35);background:rgba(255,255,255,.6);color:var(--atencao-text);cursor:pointer;white-space:nowrap}
+.turmas-faixa-pend .tfx-chip:hover{background:#fff}
+.turmas-faixa-pend .tfx-chip.on{background:var(--atencao-text);border-color:var(--atencao-text);color:#fff}
+.turmas-faixa-pend .tfx-chip .n{opacity:.7;font-weight:800;margin-left:4px}
+.turmas-faixa-pend .tfx-chip.on .n{opacity:.85}
+.turmas-faixa-pend .tfx-sair{margin-left:auto;flex-shrink:0}
+.ds-btn-sair{font-family:inherit;font-size:12px;font-weight:600;padding:7px 12px;border-radius:var(--r-md);background:#fff;border:1px solid rgba(180,83,9,.35);color:var(--atencao-text);cursor:pointer;white-space:nowrap}
+.ds-btn-sair:hover{border-color:var(--atencao-text)}
+
+/* ── tabela da Lista ── */
+.turma-tabela-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface)}
+.turma-tabela{width:100%;border-collapse:collapse;font-size:13px;min-width:820px}
+.turma-tabela thead th{position:sticky;top:0;z-index:6;background:var(--gray-50);text-align:left;padding:0;border-bottom:1px solid var(--border);white-space:nowrap}
+.turma-tabela thead th.dir{text-align:right}
+.turma-tabela thead .th{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);display:inline-flex;align-items:center;gap:4px;background:none;border:none;padding:11px 14px;margin:0;font-family:inherit;cursor:pointer;width:100%}
+.turma-tabela thead .th.thend{justify-content:flex-end}
+.turma-tabela thead .th:hover{color:var(--navy)}
+.turma-tabela thead .th.on{color:var(--navy)}
+.turma-tabela thead .th .ar{font-size:8px;flex-shrink:0}
+.turma-tabela thead .th:not(.on) .ar{opacity:.45}
+.turma-tabela thead .thwrap{position:relative;display:block}
+.turma-tabela tbody td{padding:11px 14px;border-bottom:1px solid var(--border);color:var(--text-2);vertical-align:middle}
+.turma-tabela tbody tr:last-child td{border-bottom:none}
+.turma-tabela tbody tr{cursor:pointer}
+.turma-tabela tbody tr:hover{background:var(--gray-50)}
+.turma-tabela td.dir{text-align:right;font-variant-numeric:tabular-nums}
+.turma-tabela .tt-prim{font-weight:600;color:var(--text-1);line-height:1.35}
+.turma-tabela .tt-sub{font-size:11px;color:var(--text-3);margin-top:2px;font-variant-numeric:tabular-nums}
+.turma-tabela .tt-inst{display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+.turma-tabela .tt-inst .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.turma-tabela .tt-falta{color:var(--text-3);opacity:.65}
+.turma-tabela .tt-semhora{color:var(--atencao-text);font-weight:600;margin-left:4px;font-size:11.5px}
+.turma-tabela .tt-aulas{display:inline-flex;align-items:center;gap:8px;justify-content:flex-end}
+.turma-tabela .tt-aulas .bar{height:4px;width:44px;background:var(--gray-100);border-radius:2px;overflow:hidden;flex-shrink:0}
+.turma-tabela .tt-aulas .bar i{display:block;height:100%;background:var(--green);border-radius:2px}
+.turma-tabela .tt-selos{display:inline-flex;align-items:center;gap:6px;justify-content:flex-end;flex-wrap:wrap}
+.turma-tabela .tt-pend{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--atencao-l);color:var(--atencao-text);white-space:nowrap;cursor:help}
+.turma-tabela .tt-badge{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.turma-tabela-rodape{display:flex;align-items:center;gap:12px;padding:10px 14px;border-top:1px solid var(--border);font-size:12px;color:var(--text-3);flex-wrap:wrap}
+.turma-tabela-rodape .tt-mais{margin-left:auto;font-family:inherit;font-size:12px;font-weight:600;color:var(--navy);background:none;border:none;cursor:pointer;padding:0}
+.turma-tabela-rodape .tt-mais:hover{text-decoration:underline}
+
+/* ── marca de pendencia no card do Kanban e no cabecalho da coluna ── */
+.turma-card-pendente{border-left:3px solid var(--atencao)}
+.turma-kanban-pend{display:block;width:100%;text-align:left;font-family:inherit;font-size:11.5px;font-weight:700;color:var(--atencao-text);background:var(--atencao-l);border:none;border-bottom:1px solid rgba(180,83,9,.2);padding:6px 12px;cursor:pointer}
+.turma-kanban-pend:hover{background:#FDE9B8}
+
+/* ── celular: a tabela vira cartao, coluna a coluna ── */
+@media(max-width:768px){
+  .turma-tabela-wrap{border:none;background:none;overflow-x:visible}
+  .turma-tabela{min-width:0;font-size:13px}
+  .turma-tabela thead{display:none}
+  .turma-tabela tbody tr{display:block;background:var(--surface);border:1px solid var(--border);border-left-width:1px;border-radius:var(--r-md);margin-bottom:8px;padding:11px 13px}
+  .turma-tabela tbody tr.pendente{border-left:3px solid var(--atencao)}
+  .turma-tabela tbody td{display:block;border:none;padding:2px 0;text-align:left!important}
+  .turma-tabela td.dir{text-align:left!important}
+  .turma-tabela .tt-aulas,.turma-tabela .tt-selos{justify-content:flex-start}
+  .turma-tabela .tt-selos{margin-top:6px}
+  .turma-tabela-rodape{border:none;padding:4px 2px 10px}
+  .turmas-faixa-pend .tfx-sair{margin-left:0;width:100%}
+}
 /* Mobile: cabeçalho de tabela não funciona em 390px — a linha volta a se
    comportar como um cartão empilhado (mesmo fallback que já existia), e o
    cabeçalho some. Ordenação/filtro continuam acessíveis, porque quem
@@ -9948,6 +10024,7 @@ async function renderTurmas(abaInicial) {
   // Status da Lista. O pseudo-status 'pendencia' continua existindo apenas
   // para a COLUNA do Kanban (ver TURMA_KANBAN_COLS).
   window._turmasSoPendencia = false;
+  window._turmasPendTipo = '';
   window._turmasPainelAberto = false;
   _turmasResetarPaginacao();
   _turmasLigarAtalhoBusca();
@@ -9970,10 +10047,10 @@ async function renderTurmas(abaInicial) {
         <svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><path d="M3 5h18M6 12h12M10 19h4"/></svg>
         Filtros <span id="turmasFiltrosBadge" class="fbadge" style="display:none">0</span>
       </button>
-      <button type="button" id="turmasBtnPend" class="turmas-pendbtn" onclick="_turmasTogglePendencia()" title="Mostrar apenas turmas com pendência">
-        <svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4.5M12 17.2h.01"/></svg>
-        Pendências <span class="q" id="turmasPendQtd">0</span>
-      </button>
+      <!-- 2026-09-04: o botão "Pendências" saiu daqui. Ele tinha o mesmo peso
+           visual de um filtro qualquer para dizer que N turmas não podem rodar,
+           e não dizia O QUE faltava. Foi substituído pela faixa do topo
+           (_turmasFaixaPendHtml), que destaca o aviso e recorta por tipo. -->
       <div class="turmas-viewtoggle">
         <!-- 2026-08-30 (pedido do Alisson): visão "Cards" DESATIVADA, não
              removida. O botão saiu da barra e _turmasAlternarVisao recusa
@@ -9987,7 +10064,7 @@ async function renderTurmas(abaInicial) {
            não sobrou mais nada ao lado dele. -->
       ${podeCriar?`<button class="btn btn-amber" onclick="abrirModalTurma()" style="flex-shrink:0">${ICONS.clip} Nova turma</button>`:''}
     </div>
-    <div id="turmasCorpoEl">${_turmasPainelHtml()}${_turmasResumoHtml()}${_turmasRenderVisao(_turmasCache, abaAtiva, podeCriar)}</div>`);
+    <div id="turmasCorpoEl">${_turmasPainelHtml()}${_turmasResumoHtml()}${_turmasFaixaPendHtml()}${_turmasRenderVisao(_turmasCache, abaAtiva, podeCriar)}</div>`);
   _turmasAtualizarBotoesVisao();
   _turmasAtualizarBarra();
 }
@@ -10036,7 +10113,7 @@ function _turmaDataRef(t) {
 // Rótulos/cores de status compartilhados entre a visão Cards e a visão
 // Lista (2026-08-14, Proposta B aprovada) — um único lugar pra manter as
 // duas visualmente consistentes.
-const TURMA_STATUS_LABEL = {agendada:'Agendada',em_andamento:'Em andamento',concluida:'Concluída',cancelada:'Cancelada',pendencia:'Com pendência'};
+const TURMA_STATUS_LABEL = {agendada:'A realizar',em_andamento:'Em andamento',concluida:'Concluída',cancelada:'Cancelada',pendencia:'Com pendência'};
 const TURMA_STATUS_DOT   = {agendada:'#5E6780',em_andamento:'#F59E0B',concluida:'#059669',cancelada:'#DC2626',pendencia:'#D97706'};
 
 // Nomes únicos de instrutor(es) já vinculados às sessões de uma turma — uma
@@ -10100,6 +10177,11 @@ function _turmaFiltrarLista(lista, status) {
   // pseudo-status 'pendencia' (que existe só para a coluna do Kanban).
   if (window._turmasSoPendencia) {
     filtrada = filtrada.filter(t => _turmaPendencias(t).length > 0);
+  }
+  // 2026-09-04: recorte por TIPO de pendência ("só as sem instrutor"), acionado
+  // pelos botões da faixa. Mora junto do recorte geral porque é o mesmo eixo.
+  if (window._turmasPendTipo) {
+    filtrada = filtrada.filter(t => _turmaPendencias(t).some(p => p.id === window._turmasPendTipo));
   }
   // 2026-08-14 (pedido do Alisson — Período "muito estático, só funciona
   // com visão mensal"): agora também filtra por dia (hoje), por semana
@@ -10353,7 +10435,7 @@ function _turmasListaMenuStatusHtml(lista, statusAtivo) {
   if (!window._turmasListaMenuAberto) return '';
   const opcoes = [
     {v:'todas',        rotulo:'Todas as turmas', cor:'#414B63',                       n:lista.length},
-    {v:'agendada',     rotulo:'Agendada',        cor:TURMA_STATUS_DOT.agendada,       n:lista.filter(t=>t.status==='agendada').length},
+    {v:'agendada',     rotulo:'A realizar',      cor:TURMA_STATUS_DOT.agendada,       n:lista.filter(t=>t.status==='agendada').length},
     {v:'em_andamento', rotulo:'Em andamento',    cor:TURMA_STATUS_DOT.em_andamento,   n:lista.filter(t=>t.status==='em_andamento').length},
     {v:'concluida',    rotulo:'Concluída',       cor:TURMA_STATUS_DOT.concluida,      n:lista.filter(t=>t.status==='concluida').length},
     {v:'cancelada',    rotulo:'Cancelada',       cor:TURMA_STATUS_DOT.cancelada,      n:lista.filter(t=>t.status==='cancelada').length},
@@ -10385,17 +10467,26 @@ function _htmlTurmasLista(lista, status, podeCriar) {
   // 2026-08-30: os 4 banners de KPI saíram daqui. Contexto agora é a linha de
   // resultado (_turmasResumoHtml), que é calculada sobre a lista filtrada e
   // aparece uma vez só, acima do conteúdo, valendo para Lista e Kanban.
-  const headHtml = `<div class="turma-lista-head">
-    ${_turmaListaThHtml('curso','Curso')}
-    ${_turmaListaThHtml('cliente','Cliente')}
-    ${_turmaListaThHtml('instrutor','Instrutor')}
-    ${_turmaListaThHtml('data','Data')}
-    ${_turmaListaThHtml('aulas','Aulas')}
-    <span class="thwrap">
-      <button type="button" class="th thend${(!ehTodas||window._turmasListaSort?.campo==='status')?' on':''}" onclick="_turmasListaMenuStatus(event)" title="Filtrar ou ordenar por status">Status<span class="ar">&#9662;</span></button>
-      ${_turmasListaMenuStatusHtml(lista, status)}
-    </span>
-  </div>`;
+  // 2026-09-04: a lista virou <table> de verdade. Antes eram divs em grid com
+  // borda por linha — nove turmas viravam nove cartões empilhados, e dentro da
+  // mesma linha conviviam três tamanhos de letra (12,5 / 11 / 9px), com o
+  // cabeçalho em 9,5px, menor que qualquer conteúdo. Agora: borda só na tabela,
+  // filete de 1px entre linhas, um tamanho de corpo, e o cabeçalho menor que o
+  // conteúdo de propósito. O protocolo — que é por onde a turma é procurada no
+  // telefone e no e-mail — passou a APARECER, como segunda linha do curso.
+  const headHtml = `<thead><tr>
+    <th>${_turmaListaThHtml('curso','Curso e protocolo')}</th>
+    <th>${_turmaListaThHtml('cliente','Cliente')}</th>
+    <th>${_turmaListaThHtml('instrutor','Instrutor')}</th>
+    <th class="dir">${_turmaListaThHtml('data','Data','thend')}</th>
+    <th class="dir">${_turmaListaThHtml('aulas','Aulas','thend')}</th>
+    <th class="dir">
+      <span class="thwrap">
+        <button type="button" class="th thend${(!ehTodas||window._turmasListaSort?.campo==='status')?' on':''}" onclick="_turmasListaMenuStatus(event)" title="Filtrar ou ordenar por status">Status<span class="ar">&#9662;</span></button>
+        ${_turmasListaMenuStatusHtml(lista, status)}
+      </span>
+    </th>
+  </tr></thead>`;
 
   const linhasHtml = filtrada.length===0
     ? `<div class="turmas-empty-tab">
@@ -10423,24 +10514,34 @@ function _htmlTurmasLista(lista, status, podeCriar) {
         // fina que já existia: o texto diz quantas, a barra diz o quanto —
         // antes só a barra existia, então isto é informação a mais, não a
         // menos.
-        return `<div class="turma-linha-lista" data-action="verTurma" data-id="${t.id}">
-          <span class="tl-curso">${escapeHtml(t.catalogo?.nome||'—')}</span>
-          <span class="tl-cliente">${escapeHtml(t.clientes?.nome||'—')}</span>
-          <span class="tl-inst">${nomesInstrutores.length?`<span class="dot" style="background:${_corInstrutorTurma(instId)}"></span><span style="overflow:hidden;text-overflow:ellipsis">${escapeHtml(nomesInstrutores.join(', '))}</span>`:'<span style="opacity:.4">—</span>'}</span>
-          <span class="tl-data">${dataFmt}${horaTxt?' · '+horaTxt:''}</span>
-          <span class="tl-aulas">${totalSes>0?`<span>${concSes} de ${totalSes}</span><span class="bar"><i style="width:${pct}%"></i></span>`:'<span style="opacity:.4">—</span>'}</span>
-          <span class="tl-status">
-            <span class="tl-pend" title="${pend.length?escapeHtml(pend.map(p=>p.label).join(', ')):''}">${pend.length?'<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="var(--warn)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4.5M12 17.2h.01"/></svg>':''}</span>
-            <span class="tl-badge" style="background:${BADGE_BG[st]||'var(--gray-100)'};color:${BADGE_TXT[st]||'var(--text-2)'}">${TURMA_STATUS_LABEL[st]||st}</span>
-          </span>
-        </div>`;
+        return `<tr class="turma-tr${pend.length?' pendente':''}" data-action="verTurma" data-id="${t.id}">
+          <td><div class="tt-prim">${escapeHtml(t.catalogo?.nome||'—')}</div><div class="tt-sub">${escapeHtml(t.protocolo||'')}</div></td>
+          <td>${escapeHtml(t.clientes?.nome||'—')}</td>
+          <td>${nomesInstrutores.length?`<span class="tt-inst"><span class="dot" style="background:${_corInstrutorTurma(instId)}"></span>${escapeHtml(nomesInstrutores.join(', '))}</span>`:'<span class="tt-falta">Sem instrutor</span>'}</td>
+          <td class="dir">${dataFmt}${horaTxt?' · '+horaTxt:'<span class="tt-semhora">sem hora</span>'}</td>
+          <td class="dir">${totalSes>0?`<span class="tt-aulas">${concSes} de ${totalSes}<span class="bar"><i style="width:${pct}%"></i></span></span>`:'<span style="opacity:.4">—</span>'}</td>
+          <td class="dir">
+            <span class="tt-selos">
+              ${pend.length?`<span class="tt-pend" title="${escapeHtml(pend.map(p=>p.label).join(' · '))}">${escapeHtml(pend[0].curto)}${pend.length>1?` +${pend.length-1}`:''}</span>`:''}
+              <span class="tt-badge" style="background:${BADGE_BG[st]||'var(--gray-100)'};color:${BADGE_TXT[st]||'var(--text-2)'}">${TURMA_STATUS_LABEL[st]||st}</span>
+            </span>
+          </td>
+        </tr>`;
       }).join('');
 
-  const restantesLista = window._turmasListaExpandida ? 0 : Math.max(0, filtrada.length - TURMA_LISTA_LIMITE);
-  const maisHtml = restantesLista>0
-    ? `<button type="button" class="turma-mais turma-lista-mais" onclick="_turmasListaExpandir()">Mostrar as ${restantesLista} turmas restantes</button>`
-    : '';
-  return `${filtrada.length===0?'':headHtml}${linhasHtml}${maisHtml}`;
+  if (filtrada.length === 0) return linhasHtml;   // já é o estado vazio
+
+  const mostradas = _turmasListaPaginar(filtrada).length;
+  const restantesLista = filtrada.length - mostradas;
+  const rodapeHtml = `<div class="turma-tabela-rodape">
+    <span>Mostrando ${mostradas} de ${filtrada.length} turma${filtrada.length!==1?'s':''}</span>
+    ${restantesLista>0?`<button type="button" class="tt-mais" onclick="_turmasListaExpandir()">Mostrar as ${restantesLista} restantes</button>`:''}
+  </div>`;
+
+  return `<div class="turma-tabela-wrap">
+    <table class="turma-tabela">${headHtml}<tbody>${linhasHtml}</tbody></table>
+    ${rodapeHtml}
+  </div>`;
 }
 
 // Visão Kanban (2026-08-30, mockup aprovado pelo Alisson — ver
@@ -10452,9 +10553,14 @@ function _htmlTurmasLista(lista, status, podeCriar) {
 // Pendências QUANTO na coluna do seu status real, de propósito (mesmo
 // comportamento de irParaTurmasComPendencia/_turmaFiltrarLista já usado
 // pela aba Pendências).
+// 2026-09-04 (aprovado pelo Alisson): a coluna "Pendências" SAIU. Ela não era uma
+// etapa do fluxo, era um recorte — e por isso a mesma turma aparecia duas vezes,
+// na coluna do status real e nela. Cinco turmas viravam dez cards com selo, e o
+// contador da barra (correto, 5) parecia errado. Agora as colunas são só as quatro
+// etapas reais, cada turma aparece uma vez, e o recorte de pendências vive na
+// faixa do topo (_turmasFaixaPendHtml), que ainda diz QUAL pendência é.
 const TURMA_KANBAN_COLS = [
-  {status:'agendada',     label:'Agendada',     bg:'var(--gray-100)', ink:'var(--gray-600)', linha:'var(--gray-500)'},
-  {status:'pendencia',    label:'Pendências',   bg:'var(--blue-l)',   ink:'var(--blue-text)', linha:'var(--blue)'},
+  {status:'agendada',     label:'A realizar',   bg:'var(--gray-100)', ink:'var(--gray-600)', linha:'var(--gray-500)'},
   {status:'em_andamento', label:'Em andamento', bg:'var(--amber-l)',  ink:'var(--amber-text)', linha:'var(--amber)'},
   {status:'concluida',    label:'Concluída',    bg:'var(--green-l)',  ink:'var(--green-text)', linha:'var(--green)'},
   {status:'cancelada',    label:'Cancelada',    bg:'var(--red-l)',    ink:'var(--red-text)', linha:'var(--red)'},
@@ -10478,6 +10584,9 @@ function _htmlTurmasKanban(lista) {
     // montagem dos cards é que para no limite.
     const mostrar = expandido[c.status] ? filtrada : filtrada.slice(0, TURMA_KANBAN_LIMITE);
     const restantes = filtrada.length - mostrar.length;
+    // 2026-09-04: a informação que a coluna "Pendências" dava continua aqui,
+    // sem duplicar card nenhum — e clicar recorta a tela nas pendentes.
+    const pendentesCol = filtrada.filter(t => _turmaPendencias(t).length).length;
     const cardsHtml = filtrada.length
       ? mostrar.map(t=>_htmlTurmaCard(t)).join('') +
         (restantes>0 ? `<button type="button" class="turma-mais" onclick="_turmasKanbanExpandir('${c.status}')">+ ${restantes} mais</button>` : '')
@@ -10488,6 +10597,7 @@ function _htmlTurmasKanban(lista) {
         <span class="name">${c.label}</span>
         <span class="count">${filtrada.length}</span>
       </div>
+      ${pendentesCol?`<button type="button" class="turma-kanban-pend" onclick="_turmasFiltrarPend('todas')">${pendentesCol} com pendência</button>`:''}
       <div class="turma-kanban-body">${cardsHtml}</div>
     </div>`;
   }).join('');
@@ -10569,7 +10679,10 @@ function _turmasFiltrosAtivos() {
   if (window._turmasCursoFiltro)   out.push({k:'curso',   rot:'curso',   val:window._turmasCursoFiltro});
   const pf = window._turmasPeriodoFiltro||'todos';
   if (pf !== 'todos') out.push({k:'periodo', rot:'período', val: TURMA_PERIODO_ROTULO[pf]||'intervalo'});
-  if (window._turmasSoPendencia) out.push({k:'pendencia', rot:'', val:'Com pendência'});
+  if (window._turmasSoPendencia) {
+    const tp = CATALOGO_PENDENCIAS_TURMA.find(p => p.id === window._turmasPendTipo);
+    out.push({k:'pendencia', rot:'', val: tp ? tp.curto : 'Com pendência'});
+  }
   if (window._turmasVisao !== 'kanban' && window._turmasAbaAtual && window._turmasAbaAtual !== 'todas') {
     out.push({k:'status', rot:'status', val: TURMA_STATUS_LABEL[window._turmasAbaAtual]||window._turmasAbaAtual});
   }
@@ -10588,11 +10701,19 @@ function _turmasFiltrosPainelAtivos() {
 // lista já filtrada por tudo MENOS pendência, que é exatamente o número de
 // itens que sobraria se o operador clicasse no botão.
 function _turmasQtdPendencia() {
-  const salvo = window._turmasSoPendencia;
-  window._turmasSoPendencia = false;
+  return _turmasBasePendencia().filter(t => _turmaPendencias(t).length > 0).length;
+}
+
+// A lista sobre a qual a faixa conta: tudo que os OUTROS filtros deixaram passar,
+// com o recorte de pendência desligado. Os números da faixa não podem encolher
+// conforme o próprio recorte — se encolhessem, ninguém saberia o tamanho real do
+// problema depois do primeiro clique.
+function _turmasBasePendencia() {
+  const s1 = window._turmasSoPendencia, s2 = window._turmasPendTipo;
+  window._turmasSoPendencia = false; window._turmasPendTipo = '';
   const base = _turmaFiltrarLista(_turmasCache||[], window._turmasVisao==='kanban' ? 'todas' : (window._turmasAbaAtual||'todas'));
-  window._turmasSoPendencia = salvo;
-  return base.filter(t => _turmaPendencias(t).length > 0).length;
+  window._turmasSoPendencia = s1; window._turmasPendTipo = s2;
+  return base;
 }
 
 // Atualiza só os pedaços da barra que mudam de valor. Nunca redesenha a barra
@@ -10608,9 +10729,6 @@ function _turmasAtualizarBarra() {
   document.querySelectorAll('#turmasBtnFiltros').forEach(el => {
     el.classList.toggle('on', nPainel > 0 || !!window._turmasPainelAberto);
   });
-  const qtd = _turmasQtdPendencia();
-  document.querySelectorAll('#turmasPendQtd').forEach(el => { el.textContent = qtd; });
-  document.querySelectorAll('#turmasBtnPend').forEach(el => el.classList.toggle('on', !!window._turmasSoPendencia));
   document.querySelectorAll('#turmasBuscaLimpar').forEach(el => {
     el.style.display = window._turmasBuscaAtual ? 'flex' : 'none';
   });
@@ -10692,7 +10810,7 @@ function _turmasPainelHtml() {
 function _turmasRedesenhar() {
   const podeCriar = ['administrador','comercial'].includes(usuarioAtual.perfil);
   _turmasAtualizarBarra();
-  _setElBoth('turmasCorpoEl', _turmasPainelHtml() + _turmasResumoHtml() + _turmasRenderVisao(_turmasCache, window._turmasAbaAtual, podeCriar));
+  _setElBoth('turmasCorpoEl', _turmasPainelHtml() + _turmasResumoHtml() + _turmasFaixaPendHtml() + _turmasRenderVisao(_turmasCache, window._turmasAbaAtual, podeCriar));
 }
 
 // Qualquer mudança de filtro volta as visões ao estado compacto: depois de
@@ -10721,10 +10839,60 @@ function _turmasTogglePainel() {
   _turmasRedesenhar();
 }
 
-function _turmasTogglePendencia() {
-  window._turmasSoPendencia = !window._turmasSoPendencia;
+// ── Faixa de pendências (2026-09-04) ────────────────────────────────────
+// Substitui o antigo botão "Pendências" da barra. Três decisões dentro dela:
+//   1. os números contam SEMPRE o total (ver _turmasBasePendencia) — se o
+//      próprio recorte mudasse a contagem, o operador nunca saberia o tamanho
+//      real do problema depois do primeiro clique;
+//   2. a faixa SOME por completo quando não há pendência nenhuma, em vez de
+//      virar um "está tudo certo" que se ignora depois da terceira vez;
+//   3. com um recorte ligado aparece a saída explícita — nunca existe filtro
+//      ativo sem porta de saída visível.
+// Vale para a Lista e para o Kanban: é a mesma faixa nas duas visões.
+function _turmasFiltrarPend(v) {
+  // Clicar de novo no que já está ligado desliga — evita o beco sem saída de
+  // um filtro que só se remove pelo chip.
+  const atual = window._turmasSoPendencia ? (window._turmasPendTipo || 'todas') : '';
+  const novo = (v === atual) ? '' : v;
+  window._turmasSoPendencia = !!novo;
+  window._turmasPendTipo = (novo && novo !== 'todas') ? novo : '';
   _turmasResetarPaginacao();
   _turmasRedesenhar();
+}
+
+// Mantida por compatibilidade — qualquer chamada antiga cai no recorte geral.
+function _turmasTogglePendencia() { _turmasFiltrarPend('todas'); }
+
+function _turmasFaixaPendHtml() {
+  const base = _turmasBasePendencia();
+  const comPend = base.filter(t => _turmaPendencias(t).length > 0);
+  if (!comPend.length) return '';
+
+  // Quantas turmas têm cada tipo de pendência. Uma turma pode entrar em mais de
+  // um tipo — por isso a soma dos tipos passa do total, e é assim mesmo.
+  const conta = {};
+  comPend.forEach(t => _turmaPendencias(t).forEach(p => { conta[p.id] = (conta[p.id]||0) + 1; }));
+  const tipos = CATALOGO_PENDENCIAS_TURMA
+    .filter(p => conta[p.id])
+    .sort((a,b) => conta[b.id] - conta[a.id] || a.prioridade - b.prioridade);
+
+  const ligado = window._turmasSoPendencia ? (window._turmasPendTipo || 'todas') : '';
+  const q = comPend.length;
+  const chip = (v, rot, n) =>
+    `<button type="button" class="tfx-chip${ligado===v?' on':''}" onclick="_turmasFiltrarPend('${v}')">${escapeHtml(rot)}<span class="n">${n}</span></button>`;
+
+  return `<div class="turmas-faixa-pend">
+    <span class="tfx-ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4.5M12 17.2h.01"/></svg></span>
+    <div class="tfx-tx">
+      <div class="t1">${q} turma${q>1?'s':''} ${q>1?'não estão prontas':'não está pronta'} para rodar</div>
+      <div class="t2">Falta configuração antes do encontro. Clique no que falta para ver quais.</div>
+      <div class="tfx-chips">
+        ${chip('todas','Todas',q)}
+        ${tipos.map(p => chip(p.id, p.curto, conta[p.id])).join('')}
+      </div>
+    </div>
+    ${ligado?`<button type="button" class="ds-btn-sair tfx-sair" onclick="_turmasFiltrarPend('')">Mostrar todas as turmas</button>`:''}
+  </div>`;
 }
 
 function _turmasSetFiltro(campo, valor) {
@@ -10751,7 +10919,7 @@ function _turmasLimparFiltro(k) {
   else if (k === 'cliente') window._turmasClienteFiltro = '';
   else if (k === 'curso') window._turmasCursoFiltro = '';
   else if (k === 'periodo') { window._turmasPeriodoFiltro = 'todos'; window._turmasPeriodoDe = ''; window._turmasPeriodoAte = ''; }
-  else if (k === 'pendencia') window._turmasSoPendencia = false;
+  else if (k === 'pendencia') { window._turmasSoPendencia = false; window._turmasPendTipo = ''; }
   else if (k === 'status') window._turmasAbaAtual = 'todas';
   _turmasResetarPaginacao();
   _turmasRedesenhar();
@@ -10766,6 +10934,7 @@ function _turmasLimparTudo() {
   window._turmasPeriodoDe = '';
   window._turmasPeriodoAte = '';
   window._turmasSoPendencia = false;
+  window._turmasPendTipo = '';
   window._turmasAbaAtual = 'todas';
   document.querySelectorAll('#turmasBuscaInput').forEach(el => { el.value = ''; });
   _turmasResetarPaginacao();
@@ -10888,11 +11057,22 @@ function _turmasFiltrarPeriodoCustom(inputEl) {
 // tela precisa mudar (card da lista de Turmas, Início do Comercial e
 // Início do Administrador já consomem `_turmaPendencias`).
 const CATALOGO_PENDENCIAS_TURMA = [
-  { id: 'sem_participantes', prioridade: 1, label: 'Sem participantes cadastrados',
+  // 2026-09-04: cada pendência ganhou um rótulo CURTO. O `label` continua sendo
+  // a frase completa (tooltip e painel de detalhe); o `curto` é o que aparece no
+  // selo do card, na coluna Status da lista e nos botões da faixa — lugares onde
+  // a frase inteira não cabe e o "Pendência" genérico obrigava a abrir a turma
+  // pra descobrir o que faltava (relatado pelo Alisson em 04/09).
+  { id: 'sem_participantes', prioridade: 1, label: 'Sem participantes cadastrados', curto: 'Sem participantes',
     detectar: (t) => (t.turma_participantes||[]).length === 0 },
-  { id: 'sem_instrutor', prioridade: 2, label: 'Encontro sem instrutor atribuído',
+  { id: 'sem_instrutor', prioridade: 2, label: 'Encontro sem instrutor atribuído', curto: 'Sem instrutor',
     detectar: (t, sessoes) => (sessoes||[]).some(s => !s.instrutor_id) },
-  { id: 'sem_local', prioridade: 3, label: 'Local do treinamento não definido',
+  // Regra NOVA (2026-09-04). Encontro com data e sem hora não pode ser executado
+  // e não entra na trava de conflito de agenda — a constraint EXCLUDE de `sessoes`
+  // exige hora_inicio e hora_fim para comparar. Era pendência real passando como
+  // turma completa: foi exatamente o caso que o Alisson encontrou na Avanteseg.
+  { id: 'sem_horario', prioridade: 3, label: 'Encontro sem horário definido', curto: 'Sem horário',
+    detectar: (t, sessoes) => (sessoes||[]).some(s => !s.hora_inicio || !s.hora_fim) },
+  { id: 'sem_local', prioridade: 4, label: 'Local do treinamento não definido', curto: 'Sem local',
     detectar: (t) => !(t.local||'').trim() },
 ];
 
@@ -11000,7 +11180,10 @@ function _corInstrutorTurma(instrutorId) {
 
 function _htmlTurmaCard(t) {
   const SB = {agendada:'badge-gray',em_andamento:'badge-amber',concluida:'badge-green',cancelada:'badge-red'};
-  const SL = {agendada:'Agendada',em_andamento:'Em andamento',concluida:'Concluída',cancelada:'Cancelada'};
+  // 2026-09-04: "Agendada" afirmava que o agendamento existia — e a turma está
+  // nessa etapa justamente quando ele ainda não está completo. O valor gravado
+  // em turmas.status continua 'agendada'; muda só o texto na tela.
+  const SL = {agendada:'A realizar',em_andamento:'Em andamento',concluida:'Concluída',cancelada:'Cancelada'};
   const st = t.status||'agendada';
   const sessoes = t.sessoes||[];
   const totalSes = sessoes.length;
@@ -11032,13 +11215,16 @@ function _htmlTurmaCard(t) {
   const pendHtml = pend.length ? `
     <div>
       <button type="button" class="turma-card-pend-toggle" data-action="toggleTurmaPendencias" data-id="${t.id}" onclick="event.stopPropagation()" title="${escapeHtml(pendTitle)}">
-        <span class="badge badge-warn"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4.5M12 17.2h.01"/></svg> ${pend.length>1?`${pend.length} pendências`:'Pendência'}</span>
+        <span class="badge badge-warn"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4.5M12 17.2h.01"/></svg> ${escapeHtml(pend[0].curto||'Pendência')}${pend.length>1?` +${pend.length-1}`:''}</span>
       </button>
       <div class="turma-card-pend-list" id="turmaPend-${t.id}" style="display:none" onclick="event.stopPropagation()">
         ${pend.map(p=>`<div class="turma-card-pend-item">• ${p.label}</div>`).join('')}
       </div>
     </div>` : '';
-  return `<div class="turma-card" data-action="verTurma" data-id="${t.id}">
+  // 2026-09-04: filete âmbar na borda esquerda quando há pendência — a turma
+  // se destaca dentro da coluna onde ela REALMENTE está, sem precisar de uma
+  // coluna "Pendências" duplicando o card.
+  return `<div class="turma-card${pend.length?' turma-card-pendente':''}" data-action="verTurma" data-id="${t.id}">
     <span class="badge ${SB[st]} turma-card-status">${SL[st]}</span>
     <div class="turma-card-title">${escapeHtml(t.catalogo?.nome||'Treinamento')}</div>
     <div class="turma-card-meta">
@@ -26432,7 +26618,7 @@ async function exportarRelatorioComparativoPDF() {
   // cache do navegador. Agora o nome do cache deriva de APP_BUILD, que
   // muda a cada publicação, e o activate do sw.js apaga os caches
   // anteriores sozinho.
-  var APP_BUILD = 'h1';
+  var APP_BUILD = 'h2';
   window.APP_BUILD = APP_BUILD;
 
   function _mostrarBannerAtualizacao(){
