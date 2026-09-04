@@ -987,6 +987,11 @@ body.modo-suporte-ativo .sino-painel{top:calc(60px + var(--suporte-h,34px))}
 .exec-ctx-i.wide{grid-column:1/-1}
 .exec-ctx-i .k{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);margin-bottom:3px}
 .exec-ctx-i .v{font-size:13px;color:var(--text-1);font-weight:500;line-height:1.5;white-space:pre-wrap}
+/* reserva de dia com horario a confirmar (2026-09-04) */
+.hac-campo{display:flex;align-items:flex-start;gap:9px;background:var(--gray-50);border:1px solid var(--border);border-radius:var(--r-md);padding:10px 12px;margin:0 0 12px;cursor:pointer}
+.hac-campo input{margin-top:2px;flex-shrink:0;width:15px;height:15px;accent-color:var(--navy);cursor:pointer}
+.hac-campo b{display:block;font-size:13px;font-weight:600;color:var(--text-1)}
+.hac-campo i{display:block;font-size:11px;font-style:normal;color:var(--text-3);line-height:1.5;margin-top:2px}
 .turma-tabela .tt-aulas{display:inline-flex;align-items:center;gap:8px;justify-content:flex-end}
 .turma-tabela .tt-aulas .bar{height:4px;width:44px;background:var(--gray-100);border-radius:2px;overflow:hidden;flex-shrink:0}
 .turma-tabela .tt-aulas .bar i{display:block;height:100%;background:var(--green);border-radius:2px}
@@ -10505,7 +10510,7 @@ function _htmlTurmasLista(lista, status, podeCriar) {
         const ref = _turmaDataRef(t);
         const dataFmt = ref ? `${ref.slice(8,10)}/${ref.slice(5,7)}` : '—';
         const sessaoRef = (t.sessoes||[]).find(s=>s.data===ref) || (t.sessoes||[])[0];
-        const horaTxt = sessaoRef?.hora_inicio ? sessaoRef.hora_inicio.slice(0,5) : '';
+        const horaTxt = _horaTxtSessao(sessaoRef);
         const nomesInstrutores = _turmaInstrutoresNomes(t);
         const instId = (t.sessoes||[]).find(s=>s.instrutor_id)?.instrutor_id;
         const totalSes = (t.sessoes||[]).length;
@@ -11082,9 +11087,14 @@ const CATALOGO_PENDENCIAS_TURMA = [
   // turma completamente vazia passava como configurada.
   { id: 'sem_encontro', prioridade: 1, label: 'Nenhum encontro agendado', curto: 'Sem encontro',
     detectar: (t, sessoes) => (sessoes||[]).length === 0 },
-  { id: 'sem_participantes', prioridade: 2, label: 'Sem participantes cadastrados', curto: 'Sem participantes',
+  // O dia esta reservado na agenda do instrutor, mas o horario ainda nao veio
+  // do cliente. E lembrete, nao erro — por isso vem logo depois de "sem
+  // encontro": e a proxima coisa a resolver naquela turma.
+  { id: 'horario_a_confirmar', prioridade: 2, label: 'Horário do encontro ainda não confirmado', curto: 'Horário a confirmar',
+    detectar: (t, sessoes) => (sessoes||[]).some(s => s.horario_a_confirmar) },
+  { id: 'sem_participantes', prioridade: 3, label: 'Sem participantes cadastrados', curto: 'Sem participantes',
     detectar: (t) => (t.turma_participantes||[]).length === 0 },
-  { id: 'sem_instrutor', prioridade: 3, label: 'Encontro sem instrutor atribuído', curto: 'Sem instrutor',
+  { id: 'sem_instrutor', prioridade: 4, label: 'Encontro sem instrutor atribuído', curto: 'Sem instrutor',
     detectar: (t, sessoes) => (sessoes||[]).some(s => !s.instrutor_id) },
   // Regra NOVA (2026-09-04). Encontro com data e sem hora não pode ser executado
   // e não entra na trava de conflito de agenda — a constraint EXCLUDE de `sessoes`
@@ -11094,9 +11104,9 @@ const CATALOGO_PENDENCIAS_TURMA = [
   // sem hora). Fica de guarda: a hora de TÉRMINO é opcional no formulário de
   // criação, e encontro sem hora fica fora da trava de conflito de agenda — a
   // constraint EXCLUDE de `sessoes` compara tsrange(data+hora) e ignora nulo.
-  { id: 'sem_horario', prioridade: 4, label: 'Encontro sem horário definido', curto: 'Sem horário',
+  { id: 'sem_horario', prioridade: 5, label: 'Encontro sem horário definido', curto: 'Sem horário',
     detectar: (t, sessoes) => (sessoes||[]).some(s => !s.hora_inicio || !s.hora_fim) },
-  { id: 'sem_local', prioridade: 5, label: 'Local do treinamento não definido', curto: 'Sem local',
+  { id: 'sem_local', prioridade: 6, label: 'Local do treinamento não definido', curto: 'Sem local',
     detectar: (t) => !(t.local||'').trim() },
 ];
 
@@ -11225,7 +11235,7 @@ function _htmlTurmaCard(t) {
     `<button class="btn btn-ghost btn-sm" style="padding:4px;flex-shrink:0" data-action="menuTurmaCard" data-id="${t.id}" onclick="event.stopPropagation()">${ICONS.dots}</button>`:'';
   const dataRef = _turmaDataRef(t);
   const sessaoRefCard = sessoes.find(s=>s.data===dataRef) || sessoes[0];
-  const horaTxtCard = sessaoRefCard?.hora_inicio ? sessaoRefCard.hora_inicio.slice(0,5) : '';
+  const horaTxtCard = _horaTxtSessao(sessaoRefCard);
   // Pendências: badge de atenção + painel de detalhe (ver bloco
   // CATALOGO_PENDENCIAS_TURMA/_turmaPendencias acima). Mostra o rótulo
   // específico direto — evita ter que abrir a turma só pra descobrir o que
@@ -11877,7 +11887,7 @@ async function verTurma(id, opts = {}) {
               <div class="tv-agn">${ag.concluida?'✓':i+1}</div>
               <div style="min-width:0">
                 <div class="tv-agd">${formatarData(ag.data)}</div>
-                <div class="tv-agh">${ag.hora_inicio?ag.hora_inicio.slice(0,5):'—'}${ag.hora_fim?' – '+ag.hora_fim.slice(0,5):''}</div>
+                <div class="tv-agh">${ag.horario_a_confirmar ? 'a confirmar' : `${ag.hora_inicio?ag.hora_inicio.slice(0,5):'—'}${ag.hora_fim?' – '+ag.hora_fim.slice(0,5):''}`}</div>
                 <div class="tv-agsub-mid">${_loc||'—'}</div>
                 <div class="tv-agsub-mob">${_stCor} · ${_instr}${_loc?' · '+_loc:''}</div>
               </div>
@@ -12367,6 +12377,7 @@ async function abrirModalAgendamento(turmaId, agendamentoId=null) {
       </div>
     </div>
     <div style="font-size:11px;color:var(--text-3);margin:-8px 0 6px">Sugerida automaticamente a partir da carga horária do curso (${cargaHoraria||'—'}h) — ajuste se precisar.</div>
+    ${_hacCampoHtml('mAg', !!ag?.horario_a_confirmar)}
     <div id="mAgFimAviso" style="margin:-2px 0 8px"></div>
     <div class="field"><label>Instrutor responsável</label>
       <select id="mAgInstrutor" onchange="_agVerificarConflito()" style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:var(--r-md);font-size:14px;font-family:inherit;background:var(--surface);color:var(--text-1);outline:none">
@@ -12517,14 +12528,62 @@ function _agAtualizarBotaoSalvar() {
   }
 }
 
+// ── Reserva de dia com horário a confirmar (2026-09-04) ──────────────────
+// O operador precisa segurar o dia do instrutor antes de o cliente informar o
+// horário. Antes disto ele era obrigado a inventar uma hora, e — pior — se
+// deixasse a hora de término vazia a reserva NÃO segurava nada: a trava de
+// conflito é a constraint EXCLUDE de `sessoes`, que compara
+// tsrange(data+hora_inicio, data+hora_fim) e ignora linha com hora nula.
+//
+// Aqui grava-se uma faixa de dia inteiro, que faz a trava funcionar de verdade,
+// junto da marca `horario_a_confirmar`. A marca é o que impede a faixa de virar
+// 10 horas de aula em qualquer métrica futura de custo/hora do instrutor —
+// por isso ela é uma coluna, e não algo deduzido de "começa 08:00 e acaba 18:00".
+const HAC_INICIO = '08:00', HAC_FIM = '18:00';
+
+// Texto de horário de um encontro. Reserva de dia devolve "a confirmar" em vez
+// da faixa marcadora — mostrar "08:00" faria o instrutor aparecer no local as 8h.
+function _horaTxtSessao(s) {
+  if (!s) return '';
+  if (s.horario_a_confirmar) return 'horário a confirmar';
+  return s.hora_inicio ? s.hora_inicio.slice(0,5) : '';
+}
+
+function _hacToggle(pref) {
+  const on  = document.getElementById(pref + 'HAC')?.checked;
+  const ini = document.getElementById(pref + 'Ini');
+  const fim = document.getElementById(pref + 'Fim');
+  if (!ini || !fim) return;
+  if (on) {
+    ini.dataset.antes = ini.value; fim.dataset.antes = fim.value;
+    ini.value = HAC_INICIO; fim.value = HAC_FIM;
+  } else {
+    ini.value = ini.dataset.antes || ''; fim.value = fim.dataset.antes || '';
+  }
+  ini.disabled = fim.disabled = !!on;
+  ini.style.opacity = fim.style.opacity = on ? '.5' : '';
+  // Revalida o conflito com a faixa nova — reservar o dia inteiro pode
+  // colidir com um treinamento que já existia naquele dia.
+  if (pref === 'mAg') { try { _agVerificarConflito(); } catch(e){} }
+  else                { try { _agRapidaVerificarConflito(); _agRapidaAtualizarPreview(); } catch(e){} }
+}
+
+function _hacCampoHtml(pref, marcado) {
+  return `<label class="hac-campo">
+    <input type="checkbox" id="${pref}HAC" ${marcado?'checked':''} onchange="_hacToggle('${pref}')">
+    <span><b>Dia reservado — horário a confirmar com o cliente</b><i>Segura o dia inteiro na agenda do instrutor. As horas gravadas são só um marcador, não contam como aula, e a turma fica com a pendência "Horário a confirmar" até o acerto.</i></span>
+  </label>`;
+}
+
 async function salvarAgendamento() {
   const turmaId = _modalCurrentId;
   if (!turmaId) { showToast('Erro: ID da turma não encontrado','error'); return; }
   const data = document.getElementById('mAgData')?.value;
   if (!data) { showToast('Informe a data','error'); return; }
-  const horaInicio = document.getElementById('mAgIni')?.value || null;
+  const hac = !!document.getElementById('mAgHAC')?.checked;
+  const horaInicio = hac ? HAC_INICIO : (document.getElementById('mAgIni')?.value || null);
   if (!horaInicio) { showToast('Informe a hora de início','error'); return; }
-  const horaFim = document.getElementById('mAgFim')?.value || null;
+  const horaFim = hac ? HAC_FIM : (document.getElementById('mAgFim')?.value || null);
   // Validação que faltava (bug real encontrado em teste 2026-08-08): sem
   // isso, uma Hora término preenchida antes ou igual à Hora início (seja
   // por digitação manual ou por um cálculo automático mal comportado)
@@ -12545,6 +12604,7 @@ async function salvarAgendamento() {
     data,
     hora_inicio: horaInicio,
     hora_fim:    horaFim,
+    horario_a_confirmar: hac,
     instrutor_id:document.getElementById('mAgInstrutor')?.value||null,
     modalidade:  document.getElementById('mAgMod')?.value||'presencial',
     local:       document.getElementById('mAgLocal')?.value.trim()||null,
@@ -13823,7 +13883,7 @@ function _agendaRenderDia() {
       : '<span class="badge badge-gray tbadge">Agendado</span>';
     const localTxt = t.local && s.local ? `${t.local} · ${s.local}` : (t.local || s.local || '');
     return `<div class="ag2-tlrow">
-      <div class="ag2-hour">${s.hora_inicio?s.hora_inicio.slice(0,5):'—'}</div>
+      <div class="ag2-hour">${s.horario_a_confirmar ? 'dia<br>todo' : (s.hora_inicio?s.hora_inicio.slice(0,5):'—')}</div>
       <div class="ag2-tcard${ehHoje&&!concl?' destaque':''}" data-action="verTurma" data-id="${s.turma_id}">
         <div class="tt">${escapeHtml(t.catalogo?.nome||'Treinamento')}</div>
         <div class="tm"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><path d="M3 21h18M5 21V5a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v16M14 9h4a1 1 0 0 1 1 1v11M8 8h3M8 12h3M8 16h3"/></svg> ${escapeHtml(t.clientes?.nome||'—')}${s.hora_fim?' · ⏰ até '+s.hora_fim.slice(0,5):''}${localTxt?' · <svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg> '+escapeHtml(localTxt):''}</div>
@@ -13862,7 +13922,7 @@ function _agendaRenderProximos() {
     }
     const t = s.turma;
     return `<div class="ag2-tlrow">
-      <div class="ag2-hour" style="line-height:1.3">${s.data.slice(8,10)}/${s.data.slice(5,7)}${s.hora_inicio?'<br>'+s.hora_inicio.slice(0,5):''}</div>
+      <div class="ag2-hour" style="line-height:1.3">${s.data.slice(8,10)}/${s.data.slice(5,7)}${s.horario_a_confirmar ? '<br>dia todo' : (s.hora_inicio?'<br>'+s.hora_inicio.slice(0,5):'')}</div>
       <div class="ag2-tcard" data-action="verTurma" data-id="${s.turma_id}">
         <div class="tt">${escapeHtml(t.catalogo?.nome||'Treinamento')}</div>
         <div class="tm"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><path d="M3 21h18M5 21V5a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v16M14 9h4a1 1 0 0 1 1 1v11M8 8h3M8 12h3M8 16h3"/></svg> ${escapeHtml(t.clientes?.nome||'—')}</div>
@@ -15975,6 +16035,7 @@ async function _agEquipeAbrirCriacaoRapida(instrutorId, data, horaInicio, veioDe
                   style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:var(--r-md);font-size:14px;font-family:inherit;background:var(--surface);color:var(--text-1);outline:none"></div>
             </div>
             <div id="mNtFimAviso" style="margin:6px 0 0"></div>
+            ${_hacCampoHtml('mNt', false)}
           </div>
         </div>
 
@@ -16175,9 +16236,10 @@ async function _agRapidaSalvarTurmaEAgendamento() {
   if (!cat) { showToast('Selecione o treinamento','error'); return; }
   const data = document.getElementById('mNtData')?.value;
   if (!data) { showToast('Informe a data','error'); return; }
-  const horaInicio = document.getElementById('mNtIni')?.value || null;
+  const hacNt = !!document.getElementById('mNtHAC')?.checked;
+  const horaInicio = hacNt ? HAC_INICIO : (document.getElementById('mNtIni')?.value || null);
   if (!horaInicio) { showToast('Informe a hora de início','error'); return; }
-  const horaFim = document.getElementById('mNtFim')?.value || null;
+  const horaFim = hacNt ? HAC_FIM : (document.getElementById('mNtFim')?.value || null);
   if (horaFim && horaFim <= horaInicio) {
     showToast('A hora de término deve ser depois da hora de início.','error');
     return;
@@ -16202,6 +16264,7 @@ async function _agRapidaSalvarTurmaEAgendamento() {
     data,
     hora_inicio: horaInicio,
     hora_fim: horaFim,
+    horario_a_confirmar: hacNt,
     instrutor_id: document.getElementById('mNtInstrutor')?.value || null,
     modalidade: document.getElementById('mNtMod')?.value || 'presencial',
     local: document.getElementById('mNtSala')?.value.trim() || null,
@@ -17179,7 +17242,8 @@ async function abrirExecucao(turmaId, sessaoIdParam) {
         const itens = [];
         if (t.local) itens.push(['Local', t.local]);
         if (sessaoAtiva?.local) itens.push(['Sala / complemento', sessaoAtiva.local]);
-        if (sessaoAtiva?.hora_inicio) itens.push(['Horário', sessaoAtiva.hora_inicio.slice(0,5) + (sessaoAtiva.hora_fim?' às '+sessaoAtiva.hora_fim.slice(0,5):'')]);
+        if (sessaoAtiva?.horario_a_confirmar) itens.push(['Horário', 'A confirmar — o dia está reservado, mas o horário ainda não foi acertado com o cliente']);
+        else if (sessaoAtiva?.hora_inicio) itens.push(['Horário', sessaoAtiva.hora_inicio.slice(0,5) + (sessaoAtiva.hora_fim?' às '+sessaoAtiva.hora_fim.slice(0,5):'')]);
         if (t.observacoes) itens.push(['Observações', t.observacoes]);
         if (!itens.length) return '';
         return `<div class="exec-contexto">
@@ -26665,7 +26729,7 @@ async function exportarRelatorioComparativoPDF() {
   // cache do navegador. Agora o nome do cache deriva de APP_BUILD, que
   // muda a cada publicação, e o activate do sw.js apaga os caches
   // anteriores sozinho.
-  var APP_BUILD = 'h5';
+  var APP_BUILD = 'h6';
   window.APP_BUILD = APP_BUILD;
 
   function _mostrarBannerAtualizacao(){
