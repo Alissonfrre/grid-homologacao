@@ -256,6 +256,30 @@ export async function obter(colecao, id) {
    aparecia ao arrastar um cartao no modo exemplo. */
 const _simulado = (extra = {}) => ({ ok: true, _naoGravado: true, ...extra });
 
+/* ── Update parcial, versao definitiva (h29) ───────────────────────────────
+   A regra e uma so: `undefined` significa "o formulario nao mandou este campo"
+   e sai do update; `null` significa "mandou vazio" e grava null.
+
+   A primeira versao (h27) decidia isso perguntando `k in form`, e quebrava
+   sempre que o nome no banco difere do nome no formulario — `previsao` no form
+   e `previsao_fechamento` na tabela. O campo era removido do update, o update
+   ficava vazio, o PostgREST devolvia zero linha e `.single()` estourava
+   "Cannot coerce the result to a single JSON object".
+
+   Agora ninguem precisa saber o nome do outro lado: quem monta a linha marca
+   ausencia com `undefined`, e este filtro so olha para isso. */
+const _soInformados = (linha) => {
+  const limpo = Object.fromEntries(Object.entries(linha).filter(([, v]) => v !== undefined));
+  /* Update sem campo nenhum devolve zero linha e faz `.single()` estourar com
+     "Cannot coerce the result to a single JSON object" — mensagem que nao diz
+     nada a quem le. Melhor recusar antes, com o motivo. */
+  if (!Object.keys(limpo).length) throw new Error('Nada para salvar: nenhum campo foi alterado.');
+  return limpo;
+};
+
+/* "veio vazio" (null, grava) x "nao veio" (undefined, nao toca). */
+const _ausente = (v) => v === undefined ? undefined : (v === '' ? null : v);
+
 /* Escrita: em modo exemplo só devolve o que seria gravado, para a tela poder
    ser percorrida inteira sem banco e sem risco de alguém achar que gravou. */
 export async function gravar(colecao, registro) {
@@ -484,7 +508,7 @@ export async function salvarLead(form) {
   /* `?? undefined` distingue "o formulario mandou vazio" (grava null) de "o
      formulario nem tinha esse campo" (nao toca). Sem essa diferenca nao ha
      como fazer update parcial com seguranca. */
-  const ausente = (v) => v === undefined ? undefined : (v === '' ? null : v);
+  const ausente = _ausente;
   const linha = {
     org_id: form.id ? undefined : sessao.orgId(),
     funil_id: form.id ? undefined : f.id,
@@ -517,11 +541,8 @@ export async function salvarLead(form) {
      A trilha de auditoria devolveu valor e responsavel; vagas e origem se
      perderam, porque o gatilho nao monitora esses campos.
      Agora o UPDATE leva apenas o que o formulario realmente mandou. */
-  const somenteInformados = (l) => Object.fromEntries(
-    Object.entries(l).filter(([k, v]) => v !== undefined && !(v === null && !(k in form))));
-
   const enviar = (l) => form.id
-    ? _sb.from('crm_leads').update(somenteInformados(l)).eq('id', form.id).select('id').single()
+    ? _sb.from('crm_leads').update(_soInformados(l)).eq('id', form.id).select('id').single()
     : _sb.from('crm_leads').insert(l).select('id').single();
   let { data, error } = await enviar(linha);
   if (_semColuna(error)) {
@@ -608,22 +629,23 @@ export async function salvarAtividade(form) {
   if (_origem !== 'banco') return _simulado();
 
   const linha = {
-    org_id: sessao.orgId(),
-    tipo: form.tipo || 'tarefa',
-    assunto: (form.assunto || '').trim(),
-    descricao: form.descricao || null,
-    vencimento: form.vencimento || null,
-    responsavel_id: ausente(form.responsavel_id),
-    alvo_tipo: form.alvo_tipo || null,
-    alvo_id: form.alvo_id || null
+    org_id: form.id ? undefined : sessao.orgId(),
+    tipo: form.tipo === undefined ? (form.id ? undefined : 'tarefa') : (form.tipo || 'tarefa'),
+    assunto: form.assunto === undefined ? undefined : String(form.assunto).trim(),
+    descricao: _ausente(form.descricao),
+    vencimento: _ausente(form.vencimento),
+    responsavel_id: _ausente(form.responsavel_id),
+    alvo_tipo: _ausente(form.alvo_tipo),
+    alvo_id: _ausente(form.alvo_id)
   };
-  if (!linha.assunto) throw new Error('Informe o assunto.');
+  if (!form.id && !linha.assunto) throw new Error('Informe o assunto.');
+  if (form.id && linha.assunto === '') throw new Error('Informe o assunto.');
   /* Quem criou fica gravado na criacao e nunca e reescrito na edicao: a
      atividade que o administrador abriu para o vendedor continua mostrando
      quem pediu, mesmo depois de o vendedor editar o horario. */
   if (!form.id) linha.criado_por = sessao.usuario()?.id || null;
   const q = form.id
-    ? _sb.from('crm_atividades').update(Object.fromEntries(Object.entries(linha).filter(([k,v]) => v !== undefined && k in form))).eq('id', form.id).select('id').single()
+    ? _sb.from('crm_atividades').update(_soInformados(linha)).eq('id', form.id).select('id').single()
     : _sb.from('crm_atividades').insert(linha).select('id').single();
   const { data, error } = await q;
   if (error) throw error;
@@ -781,17 +803,18 @@ export async function salvarContato(form) {
   if (_origem !== 'banco') return _simulado();
 
   const linha = {
-    org_id: sessao.orgId(),
-    nome: (form.nome || '').trim(),
-    cargo: form.cargo || null,
-    telefone: form.telefone || null,
-    email: form.email || null,
-    cliente_id: form.cliente_id || null,
-    origem: form.origem || null
+    org_id: form.id ? undefined : sessao.orgId(),
+    nome: form.nome === undefined ? undefined : String(form.nome).trim(),
+    cargo: _ausente(form.cargo),
+    telefone: _ausente(form.telefone),
+    email: _ausente(form.email),
+    cliente_id: _ausente(form.cliente_id),
+    origem: _ausente(form.origem)
   };
-  if (!linha.nome) throw new Error('Informe o nome.');
+  if (!form.id && !linha.nome) throw new Error('Informe o nome.');
+  if (form.id && linha.nome === '') throw new Error('Informe o nome.');
   const q = form.id
-    ? _sb.from('contatos').update(Object.fromEntries(Object.entries(linha).filter(([k,v]) => v !== undefined && k in form))).eq('id', form.id).select('id').single()
+    ? _sb.from('contatos').update(_soInformados(linha)).eq('id', form.id).select('id').single()
     : _sb.from('contatos').insert(linha).select('id').single();
   const { data, error } = await q;
   if (error) throw error;
