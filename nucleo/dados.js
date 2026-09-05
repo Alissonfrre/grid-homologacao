@@ -481,18 +481,22 @@ export async function salvarLead(form) {
   if (_origem !== 'banco') return _simulado();
 
   const f = await funil(form.funil_id || null);
+  /* `?? undefined` distingue "o formulario mandou vazio" (grava null) de "o
+     formulario nem tinha esse campo" (nao toca). Sem essa diferenca nao ha
+     como fazer update parcial com seguranca. */
+  const ausente = (v) => v === undefined ? undefined : (v === '' ? null : v);
   const linha = {
-    org_id: sessao.orgId(),
-    funil_id: f.id,
-    etapa_id: _etapaPorSlug(f, form.estagio || 'novo').id,
-    empresa: (form.empresa || '').trim(),
-    vagas: form.vagas ? Number(form.vagas) : null,
-    valor: form.valor === '' || form.valor == null ? null : Number(form.valor),
-    origem: form.origem || null,
-    responsavel_id: form.responsavel_id || null,
-    catalogo_id: form.catalogo_id || null,
-    treinamento_livre: form.treinamento_livre || null,
-    observacoes: form.observacoes || null
+    org_id: form.id ? undefined : sessao.orgId(),
+    funil_id: form.id ? undefined : f.id,
+    etapa_id: (form.estagio || !form.id) ? _etapaPorSlug(f, form.estagio || 'novo').id : undefined,
+    empresa: form.empresa !== undefined ? String(form.empresa).trim() : undefined,
+    vagas: ausente(form.vagas) === undefined ? undefined : (form.vagas ? Number(form.vagas) : null),
+    valor: form.valor === undefined ? undefined : (form.valor === '' || form.valor === null ? null : Number(form.valor)),
+    origem: ausente(form.origem),
+    responsavel_id: ausente(form.responsavel_id),
+    catalogo_id: ausente(form.catalogo_id),
+    treinamento_livre: ausente(form.treinamento_livre),
+    observacoes: ausente(form.observacoes)
   };
   /* `titulo` (PASSO-32) e o que o negocio esta vendendo, em texto livre. Ate
      aqui isso so podia ser um curso do catalogo ou `treinamento_livre` — o que
@@ -502,9 +506,22 @@ export async function salvarLead(form) {
   /* Previsao de fechamento: e o campo que transforma o funil em instrumento de
      previsao. Sem ele, "R$ 340 mil em negociacao" nao diz QUANDO. */
   if (form.previsao !== undefined) linha.previsao_fechamento = form.previsao || null;
-  if (!linha.empresa) throw new Error('Informe a empresa.');
+  if (!form.id && !linha.empresa) throw new Error('Informe a empresa.');
+  /* ── DEFEITO CORRIGIDO EM 05/09 (h27) ────────────────────────────────────
+     O update mandava a linha INTEIRA. Quem chamasse `salvarLead` com um
+     subconjunto de campos — uma edicao rapida, um ajuste de um campo so —
+     apagava valor, responsavel, vagas, origem e catalogo, porque o objeto
+     levava `undefined` neles e o PostgREST grava null.
+     Descoberto do pior jeito: gravei previsao em quatro negocios de
+     homologacao passando so id/empresa/previsao, e zerei o valor dos quatro.
+     A trilha de auditoria devolveu valor e responsavel; vagas e origem se
+     perderam, porque o gatilho nao monitora esses campos.
+     Agora o UPDATE leva apenas o que o formulario realmente mandou. */
+  const somenteInformados = (l) => Object.fromEntries(
+    Object.entries(l).filter(([k, v]) => v !== undefined && !(v === null && !(k in form))));
+
   const enviar = (l) => form.id
-    ? _sb.from('crm_leads').update(l).eq('id', form.id).select('id').single()
+    ? _sb.from('crm_leads').update(somenteInformados(l)).eq('id', form.id).select('id').single()
     : _sb.from('crm_leads').insert(l).select('id').single();
   let { data, error } = await enviar(linha);
   if (_semColuna(error)) {
@@ -596,7 +613,7 @@ export async function salvarAtividade(form) {
     assunto: (form.assunto || '').trim(),
     descricao: form.descricao || null,
     vencimento: form.vencimento || null,
-    responsavel_id: form.responsavel_id || null,
+    responsavel_id: ausente(form.responsavel_id),
     alvo_tipo: form.alvo_tipo || null,
     alvo_id: form.alvo_id || null
   };
@@ -606,7 +623,7 @@ export async function salvarAtividade(form) {
      quem pediu, mesmo depois de o vendedor editar o horario. */
   if (!form.id) linha.criado_por = sessao.usuario()?.id || null;
   const q = form.id
-    ? _sb.from('crm_atividades').update(linha).eq('id', form.id).select('id').single()
+    ? _sb.from('crm_atividades').update(Object.fromEntries(Object.entries(linha).filter(([k,v]) => v !== undefined && k in form))).eq('id', form.id).select('id').single()
     : _sb.from('crm_atividades').insert(linha).select('id').single();
   const { data, error } = await q;
   if (error) throw error;
@@ -774,7 +791,7 @@ export async function salvarContato(form) {
   };
   if (!linha.nome) throw new Error('Informe o nome.');
   const q = form.id
-    ? _sb.from('contatos').update(linha).eq('id', form.id).select('id').single()
+    ? _sb.from('contatos').update(Object.fromEntries(Object.entries(linha).filter(([k,v]) => v !== undefined && k in form))).eq('id', form.id).select('id').single()
     : _sb.from('contatos').insert(linha).select('id').single();
   const { data, error } = await q;
   if (error) throw error;
