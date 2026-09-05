@@ -107,9 +107,16 @@ export function secao(rotulo, { link, cor, contagem } = {}) {
    tipo: 'atencao' | 'erro' | 'info'. Atenção usa a cor própria de atenção,
    nunca o âmbar de marca — é a regra de cor da revisão de 03/09.           */
 export function aviso({ tipo = 'atencao', icone: ic, titulo, texto, acao }) {
+  /* Teto de tamanho no proprio componente: um aviso e para ser lido de
+     relance, e uma tela que gera texto a partir de uma lista pode crescer sem
+     que ninguem perceba (aconteceu: 34 propostas paradas listadas uma a uma
+     ocupavam metade do painel). Se passar disto, corta com reticencias —
+     e a tela que quiser mais detalhe usa um cartao, nao um aviso. */
+  const t = String(texto || '');
+  const cortado = t.length > 180 ? t.slice(0, 177).trimEnd() + '…' : t;
   return `<div class="ds-aviso ${tipo}">
     ${icone(ic || (tipo === 'erro' ? 'alert' : 'info'), 'lg')}
-    <div class="txt"><b>${esc(titulo)}</b>${esc(texto || '')}</div>
+    <div class="txt"><b>${esc(titulo)}</b>${esc(cortado)}</div>
     ${acao ? botao({ ...acao, tipo: 'sec', tamanho: 'sm' }) : ''}
   </div>`;
 }

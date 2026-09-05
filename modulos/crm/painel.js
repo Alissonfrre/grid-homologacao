@@ -72,13 +72,22 @@ export async function render() {
       : ''}
 
   ${aguardando.length ? ui.aviso({
-    icone:'clock', titulo:`${aguardando.length} conversas sem resposta`,
-    texto: aguardando.slice(0,3).map(c => c.nome).join(', '),
+    icone:'clock', titulo:`${aguardando.length} ${aguardando.length === 1 ? 'conversa sem resposta' : 'conversas sem resposta'}`,
+    texto: aguardando.slice(0,3).map(c => c.nome).join(' · ')
+           + (aguardando.length > 3 ? ` · e mais ${aguardando.length - 3}` : ''),
     acao:{ rotulo:'Abrir', acao:'ir:crm-conversas' } }) : ''}
 
   ${parados.length ? ui.aviso({
-    icone:'doc', titulo:`${parados.length} propostas paradas há mais de 7 dias`,
-    texto: parados.map(l => `${l.empresa} (${ui.fmt.moeda(l.valor)})`).join(' e '),
+    icone:'doc',
+    titulo: `${parados.length} ${parados.length === 1 ? 'proposta parada' : 'propostas paradas'} há mais de 7 dias · ${ui.fmt.moeda(soma(parados))}`,
+    /* ── CORRIGIDO EM 05/09 ────────────────────────────────────────────────
+       Aqui listava TODAS as propostas paradas com valor, num paragrafo so.
+       Com 34 delas — que e o numero real em homologacao — o aviso tomava
+       metade da tela e ninguem lia nenhuma. Um aviso existe para caber numa
+       olhada: tres nomes, os de maior valor, e o resto vira contagem. */
+    texto: [...parados].sort((a,b) => (b.valor||0) - (a.valor||0)).slice(0,3)
+             .map(l => `${l.empresa} (${ui.fmt.moeda(l.valor)})`).join(' · ')
+           + (parados.length > 3 ? ` · e mais ${parados.length - 3}` : ''),
     acao:{ rotulo:'Ver no funil', acao:'ir:crm-funil' } }) : ''}
 
   ${caixaFora.map(c => ui.aviso({

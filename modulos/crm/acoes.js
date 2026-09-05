@@ -317,10 +317,31 @@ export default async function acoes(acao, { redesenhar }) {
     return true;
   }
 
+  /* Marcar ganho NÃO cria turma nem cliente.
+     Decisão do Alisson em 05/09: quem cria a turma é o operador, na tela de
+     Turmas. Automatizar aqui geraria turma sem instrutor, sem data e sem
+     confirmação — e a venda também acontece fora do CRM, então o CRM não pode
+     ser a única porta de entrada de turma. O que a tela faz é dizer o que
+     acontece e apontar o caminho; quem decide é a pessoa.
+     Detalhe em 05-Decisoes/2026-09-05-lead-ganho-nao-cria-turma.md */
   if (acao.startsWith('crm:ganho:')) {
     const id = resto.split(':')[1];
-    const ok = await ponte.confirmar?.('Marcar este negócio como ganho?');
-    if (ok) await gravar(ponte, () => dados.moverLead(id, 'ganho'), redesenhar, 'Negócio ganho.');
+    const lead = await dados.obter('crm_leads', id).catch(() => null);
+    ponte.abrirModal('Marcar como ganho', `
+      <div style="font-size:14px;color:var(--text-2);line-height:1.7">
+        <b style="color:var(--text-1)">${esc(lead?.empresa || 'Este negócio')}</b> vai para a etapa de ganho
+        e sai do quadro de negociação.
+      </div>
+      <div style="margin-top:14px;padding:12px 14px;background:var(--gray-50);border-radius:var(--r-md);
+                  font-size:13px;color:var(--text-2);line-height:1.65">
+        <b style="color:var(--text-1)">A turma não é criada automaticamente.</b><br>
+        Quem monta a turma é o operador, em Turmas — com instrutor, datas e participantes.
+        O negócio fica registrado aqui como ganho, e o histórico da empresa mostra a venda.
+      </div>
+    `, `<button class="btn btn-outline" onclick="fecharModal()">Cancelar</button>
+        <button class="btn btn-navy" id="crmConfirmarGanho">Marcar como ganho</button>`);
+    ponte.aoConfirmar('crmConfirmarGanho', () => gravar(ponte,
+      () => dados.moverLead(id, 'ganho'), redesenhar, 'Negócio ganho. A turma é criada em Turmas, quando você quiser.'));
     return true;
   }
 

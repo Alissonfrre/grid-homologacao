@@ -2,7 +2,7 @@
 import * as ui from '../../nucleo/ui.js';
 import { icone } from '../../nucleo/icones.js';
 import * as dados from '../../nucleo/dados.js';
-import { ESTAGIOS, rotuloEstagio } from '../../nucleo/estagios.js';
+import { ESTAGIOS, rotuloEstagio, ehGanho } from '../../nucleo/estagios.js';
 import { EXEMPLO } from './exemplo.js';
 
 export async function render(params = {}) {
@@ -76,6 +76,14 @@ export async function render(params = {}) {
         <div style="font-size:var(--fs-3);color:var(--text-2);line-height:1.65;margin-bottom:12px">
           Fale com ${ui.esc(contato.nome)} pelo mesmo número que iniciou o atendimento.</div>
         <button class="ds-btn sec" style="width:100%;justify-content:center" data-acao="ir:crm-conversas">${icone('chat','sm')} Abrir conversa</button>`) : ''}
+
+      ${ehGanho(lead.estagio) ? ui.cartao(`
+        <div class="ds-card-titulo" style="margin-bottom:8px">Próximo passo</div>
+        <div style="font-size:var(--fs-3);color:var(--text-2);line-height:1.65;margin-bottom:12px">
+          Este negócio está ganho. A turma <b>não</b> é criada pelo CRM — quem monta é o operador,
+          em Turmas, com instrutor, datas e participantes.</div>
+        <button class="ds-btn sec" style="width:100%;justify-content:center" data-acao="ir:turmas">
+          ${icone('clip','sm')} Abrir Turmas</button>`) : ''}
 
       ${trein ? ui.cartao(`<div class="ds-card-titulo" style="margin-bottom:10px">No módulo de Treinamentos</div>
         <div class="crm-ctx-cross"><div class="t">${icone('cap','sm')} Já é cliente cadastrado</div>
