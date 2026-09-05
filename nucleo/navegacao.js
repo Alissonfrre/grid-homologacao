@@ -113,10 +113,42 @@ export const telaAberta = () => _telaAberta;
 /* Redesenha a tela atual sem passar pelo roteador: usado depois de uma
    gravacao, para a lista refletir o que acabou de mudar sem piscar a tela
    inteira nem perder a rota. */
+/* ── Foco atravessa o redesenho (05/09, h37) ───────────────────────────────
+   A tela e refeita INTEIRA a cada acao, entao o campo em que a pessoa estava
+   digitando deixa de existir: o foco cai no body e a proxima tecla se perde.
+   Quem digita uma busca de tres letras ve o campo morrer no meio.
+
+   A devolucao mora aqui, e nao em quem trata o clique, por um motivo achado
+   testando: `acao()` chama `redesenhar()` SEM esperar, entao quem deu
+   `await tratarAcao(...)` volta antes do DOM ter sido trocado — e devolvia o
+   foco para o elemento velho, que era descartado logo depois. Aqui e o unico
+   ponto que sabe exatamente quando o DOM novo entrou.
+
+   Vale para qualquer controle com id, nao so a busca. */
+function _guardarFoco() {
+  const el = typeof document !== 'undefined' ? document.activeElement : null;
+  if (!el || !el.id || !/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return null;
+  let pos = null;
+  try { pos = el.selectionStart; } catch (e) { /* number/email nao tem selecao */ }
+  return { id: el.id, pos };
+}
+function _devolverFoco(g) {
+  if (!g) return;
+  /* A casca desenha dois corpos (computador e celular) com os mesmos ids;
+     devolver o foco para o invisivel e o mesmo que perde-lo. */
+  const alvo = [...document.querySelectorAll(`[id="${CSS.escape(g.id)}"]`)]
+    .find((c) => c.getBoundingClientRect().width > 0);
+  if (!alvo || alvo === document.activeElement) return;
+  alvo.focus();
+  if (g.pos != null) { try { alvo.setSelectionRange(g.pos, g.pos); } catch (e) { /* idem */ } }
+}
+
 export async function redesenhar() {
   if (!_telaAberta) return false;
+  const foco = _guardarFoco();
   _destino()(await _telaAberta.render(_paramsAtuais));
   if (_telaAberta.depois) _telaAberta.depois(_paramsAtuais);
+  _devolverFoco(foco);
   return true;
 }
 

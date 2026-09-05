@@ -3864,12 +3864,10 @@ function _ligarAcoesDeModulo() {
   // Agora responde a digitacao, com uma pausa de 250ms para nao redesenhar a
   // tela a cada tecla.
   //
-  // O redesenho refaz a tela inteira, entao o campo em que a pessoa estava
-  // digitando deixa de existir: o foco cai no body e a letra seguinte se
-  // perde. Por isso o foco e a posicao do cursor sao guardados antes e
-  // devolvidos depois, no campo de mesmo id que estiver visivel — a casca
-  // desenha dois corpos (computador e celular) com os mesmos ids, e devolver
-  // o foco para o invisivel seria o mesmo que perde-lo.
+  // Devolver o foco depois do redesenho NAO e problema daqui: `acao()` dispara
+  // `redesenhar()` sem esperar, entao neste ponto o DOM novo ainda nao entrou.
+  // Quem devolve e `redesenhar()` em nucleo/navegacao.js, que e o unico lugar
+  // que sabe a hora certa.
   let _tBusca = null;
   document.addEventListener('input', (ev) => {
     if (!_GRID) return;
@@ -3878,17 +3876,8 @@ function _ligarAcoesDeModulo() {
     const acao = el.dataset.acao;
     if (!acao) return;
     clearTimeout(_tBusca);
-    _tBusca = setTimeout(async () => {
-      const id  = el.id;
-      const pos = el.selectionStart;
-      await _GRID.tratarAcao(acao + ':' + el.value);
-      if (!id) return;
-      const volta = [...document.querySelectorAll('[id="' + CSS.escape(id) + '"]')]
-        .find((c) => c.getBoundingClientRect().width > 0);
-      if (!volta || volta === document.activeElement) return;
-      volta.focus();
-      try { volta.setSelectionRange(pos, pos); } catch (e) { /* input sem selecao */ }
-    }, 250);
+    const valor = el.value;
+    _tBusca = setTimeout(() => { _GRID.tratarAcao(acao + ':' + valor); }, 250);
   });
 }
 
@@ -27291,7 +27280,7 @@ async function exportarRelatorioComparativoPDF() {
   // cache do navegador. Agora o nome do cache deriva de APP_BUILD, que
   // muda a cada publicação, e o activate do sw.js apaga os caches
   // anteriores sozinho.
-  var APP_BUILD = 'h36';
+  var APP_BUILD = 'h37';
   window.APP_BUILD = APP_BUILD;
 
   function _mostrarBannerAtualizacao(){
