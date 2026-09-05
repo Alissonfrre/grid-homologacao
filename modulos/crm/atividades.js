@@ -65,11 +65,11 @@ export async function render() {
   ])}
 
   ${ui.filtros({
-    busca:{ id:'crmBuscaAtiv', placeholder:'Buscar assunto, descrição ou responsável', acao:'crm:filtrar-ativ' },
+    busca:{ id:'crmBuscaAtiv', valor:_busca, placeholder:'Buscar assunto, descrição ou responsável', acao:'crm:filtrar-ativ' },
     selects:[
-      { id:'crmAtivResp', acao:'crm:ativ-resp',
+      { id:'crmAtivResp', acao:'crm:ativ-resp', valor:_resp,
         opcoes:[{ v:'', r:'Todos os responsáveis' }, ...responsaveis.map(r => ({ v:r, r }))] },
-      { id:'crmAtivTipo', acao:'crm:ativ-tipo',
+      { id:'crmAtivTipo', acao:'crm:ativ-tipo', valor:_tipo,
         opcoes:[{ v:'', r:'Todos os tipos' }, ...Object.entries(TIPOS).map(([v,r]) => ({ v, r }))] }
     ]
   })}

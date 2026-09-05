@@ -46,7 +46,7 @@ export async function render() {
   ])}
 
   ${ui.filtros({
-    busca:{ id:'crmBuscaContato', placeholder:'Buscar por nome, telefone ou empresa', acao:'crm:filtrar-contatos' },
+    busca:{ id:'crmBuscaContato', valor:_busca, placeholder:'Buscar por nome, telefone ou empresa', acao:'crm:filtrar-contatos' },
     selects: celular ? [] : [
       { id:'crmFiltroEmpresa', acao:'crm:filtro-empresa', valor:_fEmpresa,
         opcoes:[{ v:'', r:'Todas as empresas' }, ...todasEmpresas.map(x => ({ v:x, r:x }))] },
@@ -79,7 +79,7 @@ function tabela(contatos) {
         render:(c) => `<button class="ds-icobtn" title="Editar contato" data-acao="crm:contato:${c.id}">${icone('tool','sm')}</button>` }
     ],
     linhas,
-    rodape: ui.paginacao({ total: linhas.length, rotulo:'contatos' })
+    rodape: ui.paginacao({ total: linhas.length, porPagina: linhas.length, rotulo:'contatos' })
   });
 }
 

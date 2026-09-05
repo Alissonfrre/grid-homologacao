@@ -129,7 +129,8 @@ export const selo = (rotulo, tipo = 'neutro', ponto = false) =>
 export function filtros({ busca, selects = [], direita = '' }) {
   return `<div class="ds-filtros">
     ${busca ? `<div class="ds-busca">${icone('search','sm')}
-      <input type="search" id="${esc(busca.id)}" placeholder="${esc(busca.placeholder || 'Buscar')}" data-acao="${esc(busca.acao || '')}"></div>` : ''}
+      <input type="search" id="${esc(busca.id)}" placeholder="${esc(busca.placeholder || 'Buscar')}"
+             value="${esc(busca.valor || '')}" data-acao="${esc(busca.acao || '')}"></div>` : ''}
     ${selects.map(s => `<select class="ds-select" id="${esc(s.id)}" ${s.acao ? `data-acao="${esc(s.acao)}"` : ''}>
       ${s.opcoes.map(o => {
         const v = o.v ?? o, r = o.r ?? o;
@@ -178,12 +179,30 @@ export function tabela({ colunas, linhas, ordem, selecao = [], selecionavel = fa
     ${rodape}</div>`;
 }
 
-export function paginacao({ pagina = 1, paginas = 1, total = 0, rotulo = 'registros' }) {
-  const p = [];
-  for (let i = 1; i <= Math.min(paginas, 4); i++) p.push(`<span class="${i === pagina ? 'on' : ''}" data-acao="pagina:${i}">${i}</span>`);
+export function paginacao({ pagina = 1, paginas = 1, total = 0, rotulo = 'registros', porPagina = 20 }) {
+  /* O texto dizia "Mostrando 20 de N" com 20 FIXO no código — mesmo quando a
+     tela mostrava 25. Agora ele conta o que está de fato na página, incluindo
+     a última, que quase nunca está cheia. E a numeração acompanha a página
+     atual em vez de mostrar sempre 1-4: com 57 registros e a pessoa na página
+     3, "1 2 3 4" sem destaque não diz onde ela está. */
+  const primeiro = total === 0 ? 0 : (pagina - 1) * porPagina + 1;
+  const ultimo   = Math.min(pagina * porPagina, total);
+
+  const janela = [];
+  const ini = Math.max(1, Math.min(pagina - 1, paginas - 3));
+  for (let i = ini; i <= Math.min(paginas, ini + 3); i++) janela.push(i);
+
+  const btn = (i, rot, ativo) => `<span class="${ativo ? 'on' : ''}" data-acao="pagina:${i}">${rot}</span>`;
+  const p = [
+    pagina > 1 ? btn(pagina - 1, icone('back','sm'), false) : '',
+    ...janela.map(i => btn(i, String(i), i === pagina)),
+    pagina < paginas ? btn(pagina + 1, icone('chevronright','sm'), false) : ''
+  ].filter(Boolean);
+
   return `<div class="ds-tabela-rodape">
-    <span>Mostrando ${Math.min(total, 20)} de ${total} ${esc(rotulo)}</span>
-    <div class="pag">${p.join('')}${paginas > 1 ? `<span data-acao="pagina:${pagina + 1}">${icone('chevronright','sm')}</span>` : ''}</div>
+    <span>${total === 0 ? `Nenhum ${esc(rotulo).replace(/s$/, '')}`
+      : `Mostrando ${primeiro}–${ultimo} de ${total} ${esc(rotulo)}`}</span>
+    <div class="pag">${p.join('')}</div>
   </div>`;
 }
 

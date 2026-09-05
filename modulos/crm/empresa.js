@@ -109,6 +109,10 @@ async function listaDeEmpresas() {
   if (_situacao === 'clientes') lista = lista.filter(e => e.ganhos > 0);
   if (_situacao === 'sem-cnpj') lista = lista.filter(e => !e.cnpj && !e.naoCadastrada);
   if (_situacao === 'nao-cadastradas') lista = lista.filter(e => e.naoCadastrada);
+  /* Faltava aplicar: o filtro de cidade tinha estado, tinha select e tinha
+     tratador — e não filtrava. Achado testando com "Joinville" e vendo o total
+     continuar em 57. Declarar o estado não é implementar o filtro. */
+  if (_cidade) lista = lista.filter(e => e.cidade === _cidade);
   if (_busca) {
     const t = chaveBusca(_busca);
     lista = lista.filter(e => chaveBusca(e.nome).includes(t) || chaveBusca(e.cnpj).includes(t)
@@ -141,7 +145,7 @@ async function listaDeEmpresas() {
   ])}
 
   ${ui.filtros({
-    busca:{ id:'crmBuscaEmpresa', placeholder:'Buscar por nome, CNPJ ou cidade', acao:'crm:buscar-empresa' },
+    busca:{ id:'crmBuscaEmpresa', valor:_busca, placeholder:'Buscar por nome, CNPJ ou cidade', acao:'crm:buscar-empresa' },
     selects:[
       { id:'crmEmpSituacao', acao:'crm:emp-situacao', valor:_situacao, opcoes:[
         { v:'', r:'Todas as empresas' },
@@ -174,7 +178,7 @@ async function listaDeEmpresas() {
         render:(e) => e.ultimo ? ui.fmt.desde(e.ultimo) : '—' }
     ],
     linhas: naPagina,
-    rodape: ui.paginacao({ pagina, paginas, total: lista.length, rotulo:'empresas' })
+    rodape: ui.paginacao({ pagina, paginas, total: lista.length, porPagina: POR_PAGINA, rotulo:'empresas' })
   }) : ui.vazio({ icone:'building',
       titulo: _busca || _situacao || _cidade ? 'Nenhuma empresa encontrada' : 'Nenhuma empresa com negócio',
       sub: _busca || _situacao || _cidade

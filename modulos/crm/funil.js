@@ -102,7 +102,7 @@ export async function render() {
   ])}
 
   ${ui.filtros({
-    busca:{ id:'crmBuscaLead', placeholder:'Buscar empresa, contato ou negócio', acao:'crm:filtrar-leads' },
+    busca:{ id:'crmBuscaLead', valor:_busca, placeholder:'Buscar empresa, contato ou negócio', acao:'crm:filtrar-leads' },
     selects:[
       { id:'crmFiltroResp', acao:'crm:filtro-resp', valor:_resp,
         opcoes:[{ v:'', r:'Todos os responsáveis' }, ...todosResp.map(x => ({ v:x, r:x }))] },
@@ -214,7 +214,7 @@ function tabela(leads) {
         } }
     ],
     linhas,
-    rodape: ui.paginacao({ pagina:1, paginas:1, total: linhas.length, rotulo:'leads' })
+    rodape: ui.paginacao({ pagina:1, paginas:1, total: linhas.length, porPagina: linhas.length, rotulo:'leads' })
   });
 }
 
