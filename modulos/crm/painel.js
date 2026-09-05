@@ -41,8 +41,14 @@ export async function render() {
     { rotulo:'Ganhos no mês',      icone:'check',  valor: ganhos.length, nota: ui.fmt.moeda(soma(ganhos)), notaTipo:'up' }
   ])}
 
-  ${(aguardando.length || parados.length || caixaFora.length) ? ui.secao('Requer decisão hoje', {
-      link:{ rotulo:`${aguardando.length + parados.length + caixaFora.length} itens`, acao:'' } }) : ''}
+  ${(aguardando.length || parados.length || caixaFora.length)
+      /* ── BUG CORRIGIDO EM 05/09 (h17) ──────────────────────────────────
+         Este cabecalho vinha com `link:{ acao:'' }`. Uma acao vazia nao e
+         tratador nenhum: o clique caia no roteador e terminava na Home.
+         O mockup aprovado nunca teve link aqui — quem leva a algum lugar sao
+         os avisos abaixo, cada um com o seu proprio destino. */
+      ? ui.secao('Requer decisão hoje', { contagem: `${aguardando.length + parados.length + caixaFora.length} itens` })
+      : ''}
 
   ${aguardando.length ? ui.aviso({
     icone:'clock', titulo:`${aguardando.length} conversas sem resposta`,

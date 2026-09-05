@@ -8,6 +8,8 @@ import { avisoDemo } from './painel.js';
 
 let _caixaAtiva = 'todas';
 let _conversaAtiva = null;
+let _busca = '';
+let _filtro = 'todas';        // 'todas' | 'minhas' | 'sem-dono'
 
 export async function render(params = {}) {
   const [caixas, conversas, contatos] = await Promise.all([
@@ -17,7 +19,18 @@ export async function render(params = {}) {
   ]);
 
   const varios = caixas.length > 1;
-  const lista  = _caixaAtiva === 'todas' ? conversas : conversas.filter(c => c.caixa_id === _caixaAtiva);
+  /* 05/09 (h17): a lista era so filtrada por caixa. Busca e os tres chips do
+     topo existiam desenhados na tela, mas nao respondiam a clique nenhum —
+     eram enfeite. Agora filtram de verdade. */
+  const eu = sessao.usuario()?.nome || '';
+  let lista = _caixaAtiva === 'todas' ? conversas : conversas.filter(c => c.caixa_id === _caixaAtiva);
+  if (_filtro === 'minhas')   lista = lista.filter(c => c.responsavel && c.responsavel === eu);
+  if (_filtro === 'sem-dono') lista = lista.filter(c => !c.responsavel);
+  if (_busca) {
+    const t = _busca.toLowerCase();
+    lista = lista.filter(c => [c.nome, c.empresa, c.previa, c.telefone]
+      .some(v => (v || '').toLowerCase().includes(t)));
+  }
   _conversaAtiva = params.conversa || _conversaAtiva || lista[0]?.id;
   const atual   = conversas.find(c => c.id === _conversaAtiva) || lista[0];
   const contato = contatos.find(c => c.id === atual?.contato_id);
@@ -78,11 +91,12 @@ function colunaLista(lista, caixas, varios) {
   <div class="crm-col">
     <div class="crm-col-head">
       <div class="ds-busca" style="max-width:none;margin-bottom:10px">${icone('search','sm')}
-        <input type="search" placeholder="Buscar conversa, contato ou telefone" data-acao="crm:buscar-conversa"></div>
+        <input type="search" placeholder="Buscar conversa, contato ou telefone" value="${ui.esc(_busca)}" data-acao="crm:buscar-conversa"></div>
       <div style="display:flex;gap:5px;flex-wrap:wrap">
-        <span class="ds-selo" style="background:var(--navy);color:#fff;cursor:pointer">Todas · ${lista.length}</span>
-        <span class="ds-selo neutro" style="cursor:pointer">Minhas</span>
-        <span class="ds-selo neutro" style="cursor:pointer">Sem responsável</span>
+        ${[['todas', `Todas · ${lista.length}`], ['minhas','Minhas'], ['sem-dono','Sem responsável']]
+          .map(([id, rot]) => `<span class="ds-selo ${_filtro === id ? '' : 'neutro'}"
+            style="cursor:pointer${_filtro === id ? ';background:var(--navy);color:#fff' : ''}"
+            data-acao="crm:filtro-conv:${id}">${rot}</span>`).join('')}
       </div>
     </div>
     <div class="crm-col-body">
@@ -186,7 +200,9 @@ const linhaCtx = (k, v) => `<div class="crm-ctx-linha"><span class="k">${k}</spa
 
 /* Troca de caixa e de conversa sem recarregar a tela inteira. */
 export function acao(nome, valor, redesenhar) {
-  if (nome === 'crm:caixa')    { _caixaAtiva = valor;    redesenhar(); return true; }
-  if (nome === 'crm:conversa') { _conversaAtiva = valor; redesenhar(); return true; }
+  if (nome === 'crm:caixa')           { _caixaAtiva = valor; redesenhar(); return true; }
+  if (nome === 'crm:conversa')        { _conversaAtiva = valor; redesenhar(); return true; }
+  if (nome === 'crm:buscar-conversa') { _busca = valor || ''; redesenhar(); return true; }
+  if (nome === 'crm:filtro-conv')     { _filtro = valor || 'todas'; redesenhar(); return true; }
   return false;
 }

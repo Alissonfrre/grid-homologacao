@@ -3883,7 +3883,20 @@ function _perfilTemAcesso(pagina) {
   if (pagina === 'home') return true;
   const perfil = usuarioAtual?.perfil;
   const itens = NAV[perfil] || [];
-  return itens.some(i => i.id === pagina);
+  if (itens.some(i => i.id === pagina)) return true;
+  // ── BUG CORRIGIDO EM 05/09 (h17) ──────────────────────────────────────
+  // NAV so conhece as telas do Treinamentos. Toda rota de modulo caia aqui
+  // como "sem acesso" e irPara() a trocava por 'home' — por isso clicar no
+  // cartao de um lead (data-acao="ir:crm-lead:<id>") ia para a tela inicial.
+  // Os itens VISIVEIS do modulo sao injetados em NAV por
+  // _injetarMenuDosModulos, entao o menu funcionava; as rotas OCULTAS
+  // (ficha do lead) nunca entram no menu e continuavam caindo em 'home'.
+  // Quem sabe se a rota existe e quem pode abri-la e o manifesto do modulo.
+  try {
+    const r = _GRID?.navegacao?.rota?.(pagina);
+    if (r) return !r.item.perfis || r.item.perfis.includes(perfil);
+  } catch (e) { /* sem modulo carregado: segue a regra de NAV acima */ }
+  return false;
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -27162,7 +27175,7 @@ async function exportarRelatorioComparativoPDF() {
   // cache do navegador. Agora o nome do cache deriva de APP_BUILD, que
   // muda a cada publicação, e o activate do sw.js apaga os caches
   // anteriores sozinho.
-  var APP_BUILD = 'h16';
+  var APP_BUILD = 'h17';
   window.APP_BUILD = APP_BUILD;
 
   function _mostrarBannerAtualizacao(){

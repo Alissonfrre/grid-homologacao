@@ -1,55 +1,85 @@
-/* GRID · modulos/crm/funil.js — quadro e tabela de leads
-   No celular o quadro não é exibido: cinco colunas pedem 1.200px, que é o
-   problema que o kanban de Turmas tem hoje. A tela abre na lista. */
+/* ══════════════════════════════════════════════════════════════════════════
+   GRID · modulos/crm/funil.js — quadro e tabela de leads
+
+   Tres mudancas de 05/09 (h17), todas vindas da revisao critica:
+     • O quadro aceita ARRASTAR o cartao entre etapas (antes so o botao "Mover
+       para" dentro da ficha do lead movia um negocio).
+     • A organizacao pode ter MAIS DE UM FUNIL, e o seletor do topo troca entre
+       eles. Cada funil e um processo comercial proprio.
+     • O texto do cartao deixou de ser "empresa — treinamento (N vagas)". Quem
+       vende treinamento continua vendo o curso; quem vende outra coisa ve o
+       que escreveu. O CRM parou de presumir o que a empresa vende.
+
+   No celular o quadro nao e exibido: cinco colunas pedem 1.200px. A tela abre
+   na lista.
+   ══════════════════════════════════════════════════════════════════════════ */
 import * as ui from '../../nucleo/ui.js';
 import { icone } from '../../nucleo/icones.js';
 import * as dados from '../../nucleo/dados.js';
 import * as sessao from '../../nucleo/sessao.js';
-import { ESTAGIOS, rotuloEstagio } from '../../nucleo/estagios.js';
+import { ESTAGIOS, rotuloEstagio, etapa, fundoDe, ehAberta, ehGanho } from '../../nucleo/estagios.js';
 import { avisoDemo } from './painel.js';
 
 let _busca = '';
 let _visao = 'quadro';                       // 'quadro' | 'tabela'
 let _ordem = { campo:'valor', desc:true };
 let _selecao = [];
+let _funis = [];
 
 export async function render() {
+  // Os funis so existem em modo banco; em demonstracao a lista vem vazia e o
+  // seletor simplesmente nao aparece — nenhuma tela precisa saber disso.
+  try { _funis = await dados.listarFunis(); } catch { _funis = []; }
+
   let leads = await dados.listar('crm_leads');
   // A busca cobre o que a pessoa tem na cabeca quando procura um negocio:
-  // empresa, treinamento, responsavel e origem.
+  // empresa, o que esta sendo vendido, responsavel e origem.
   if (_busca) {
     const t = _busca.toLowerCase();
-    leads = leads.filter(l => [l.empresa, l.treinamento, l.responsavel, l.origem]
+    leads = leads.filter(l => [l.empresa, l.item || l.treinamento, l.responsavel, l.origem]
       .some(v => (v || '').toLowerCase().includes(t)));
   }
   const celular = sessao.ehCelular();
   const visao = celular ? 'lista' : _visao;
 
-  const abertos    = leads.filter(l => l.estagio !== 'ganho');
-  const ganhos     = leads.filter(l => l.estagio === 'ganho');
-  const negociacao = leads.filter(l => ['proposta','negociacao'].includes(l.estagio));
+  const abertos    = leads.filter(l => ehAberta(l.estagio));
+  const ganhos     = leads.filter(l => ehGanho(l.estagio));
+  // "Em negociacao" era uma lista de slugs escrita na mao ('proposta',
+  // 'negociacao') — que quebra assim que a organizacao renomeia ou cria etapa.
+  // Agora e a metade final das etapas abertas, seja qual for o nome delas.
+  const meio       = ESTAGIOS.filter(ehAbertaE).slice(Math.ceil(ESTAGIOS.filter(ehAbertaE).length / 2)).map(e => e.id);
+  const negociacao = leads.filter(l => meio.includes(l.estagio));
   const soma = (a) => a.reduce((s,l) => s + (l.valor||0), 0);
+  const admin = sessao.perfil() === 'administrador';
+
+  const acoes = celular
+    ? [{ rotulo:'Novo lead', icone:'plus', tipo:'pri', acao:'crm:novo-lead' }]
+    : [
+        ...(admin ? [{ rotulo:'Configurar funil', icone:'settings', tipo:'sec', acao:'ir:crm-funis' }] : []),
+        { rotulo: visao === 'quadro' ? 'Ver em tabela' : 'Ver em quadro',
+          icone: visao === 'quadro' ? 'grid' : 'funnel', tipo:'sec', acao:'crm:visao' },
+        { rotulo:'Novo lead', icone:'plus', tipo:'pri', acao:'crm:novo-lead' }
+      ];
 
   return `
   ${ui.topo({
     modulo:'CRM', moduloIcone:'funnel',
     titulo: visao === 'tabela' ? 'Leads' : 'Funil de vendas',
     sub: `${abertos.length} abertos · ${ui.fmt.moeda(soma(negociacao))} em negociação`,
-    acoes: celular ? [{ rotulo:'Novo lead', icone:'plus', tipo:'pri', acao:'crm:novo-lead' }] : [
-      { rotulo: visao === 'quadro' ? 'Ver em tabela' : 'Ver em quadro', icone: visao === 'quadro' ? 'grid' : 'funnel', tipo:'sec', acao:'crm:visao' },
-      { rotulo:'Novo lead', icone:'plus', tipo:'pri', acao:'crm:novo-lead' }
-    ]
+    acoes
   })}
+
+  ${seletorDeFunis()}
 
   ${ui.kpis([
     { rotulo:'Abertos',       icone:'funnel', valor: abertos.length },
-    { rotulo:'Em negociação', icone:'doc',    valor: ui.fmt.moeda(soma(negociacao)), nota:`${negociacao.length} propostas` },
+    { rotulo:'Em negociação', icone:'doc',    valor: ui.fmt.moeda(soma(negociacao)), nota:`${negociacao.length} negócios` },
     { rotulo:'Ganhos no mês', icone:'check',  valor: ganhos.length, nota: ui.fmt.moeda(soma(ganhos)), notaTipo:'up' },
     { rotulo:'Conversão',     icone:'trend',  valor: (leads.length ? Math.round(ganhos.length/leads.length*100) : 0) + '%' }
   ])}
 
   ${ui.filtros({
-    busca:{ id:'crmBuscaLead', placeholder:'Buscar empresa, contato ou treinamento', acao:'crm:filtrar-leads' },
+    busca:{ id:'crmBuscaLead', placeholder:'Buscar empresa, contato ou negócio', acao:'crm:filtrar-leads' },
     selects:[
       { id:'crmFiltroResp',    opcoes:['Todos os responsáveis', ...new Set(leads.map(l=>l.responsavel).filter(Boolean))] },
       { id:'crmFiltroOrigem',  opcoes:['Todas as origens', ...new Set(leads.map(l=>l.origem).filter(Boolean))] }
@@ -60,22 +90,46 @@ export async function render() {
   ${dados.ehExemplo() ? avisoDemo() : ''}`;
 }
 
+const ehAbertaE = (e) => e.tipo === 'aberto';
+
+/* ── Seletor de funis ──────────────────────────────────────────────────────
+   So aparece com mais de um funil: com um so, um seletor de uma opcao e ruido
+   puro — mesma regra que o menu em blocos ja usa para modulo unico. */
+function seletorDeFunis() {
+  if (_funis.length < 2) return '';
+  const atual = dados.funilCorrenteId();
+  return `<div class="crm-funis-trilho">
+    ${_funis.map(f => `<span class="crm-funil-chip ${f.id === atual ? 'ativo' : ''}"
+      data-acao="crm:funil:${f.id}">${ui.esc(f.nome)}${f.padrao ? ' <i class="pad" title="Funil padrão"></i>' : ''}</span>`).join('')}
+  </div>`;
+}
+
+/* ── Quadro ────────────────────────────────────────────────────────────────
+   Colunas: etapas abertas + a de ganho. "Perdido" fica fora do quadro de
+   proposito — e uma coluna que so cresce, e o lugar de olhar para negocio
+   perdido e a tabela, com filtro e periodo. */
 function quadro(leads) {
-  return `<div class="crm-kanban-wrap"><div class="crm-kanban">
-    ${ESTAGIOS.map(e => {
+  const colunas = ESTAGIOS.filter(e => e.tipo !== 'perdido');
+  return `<div class="crm-kanban-wrap"><div class="crm-kanban" style="grid-template-columns:repeat(${colunas.length},minmax(232px,1fr));min-width:${colunas.length*240}px">
+    ${colunas.map(e => {
       const doEstagio = leads.filter(l => l.estagio === e.id);
       const total = doEstagio.reduce((s,l) => s + (l.valor||0), 0);
-      return `<div>
-        <div class="crm-kb-head" style="background:${e.fundo};border-bottom-color:${e.cor};color:${e.id==='ganho'?'var(--green-text)':e.id==='proposta'?'var(--amber-text)':'var(--navy)'}">
-          <span class="nome">${e.rotulo}</span><span class="tot">${doEstagio.length} · ${ui.fmt.moeda(total)}</span></div>
-        <div class="crm-kb-body">${doEstagio.map(cartaoLead).join('') || `<div style="padding:14px;font-size:var(--fs-2);color:var(--text-3);text-align:center">Nenhum lead</div>`}</div>
+      return `<div class="crm-kb-col" data-etapa="${ui.esc(e.id)}">
+        <div class="crm-kb-head" style="background:${fundoDe(e.cor)};border-bottom-color:${e.cor}">
+          <i class="crm-kb-ponto" style="background:${e.cor}"></i>
+          <span class="nome">${ui.esc(e.rotulo)}</span>
+          <span class="tot">${doEstagio.length}${total ? ' · ' + ui.fmt.moeda(total) : ''}</span></div>
+        <div class="crm-kb-body" data-solta="${ui.esc(e.id)}">
+          ${doEstagio.map(cartaoLead).join('') || `<div class="crm-kb-vazio">Arraste um negócio para cá</div>`}
+        </div>
       </div>`; }).join('')}
   </div></div>`;
 }
 
 const cartaoLead = (l) => `
-  <div class="crm-lead-card" data-acao="ir:crm-lead:${l.id}" ${l.estagio==='ganho'?'style="border-left:3px solid var(--green)"':''}>
-    <div class="crm-lead-emp">${ui.esc(l.empresa)}${l.treinamento ? ' — ' + ui.esc(l.treinamento) : ''}</div>
+  <div class="crm-lead-card" draggable="true" data-lead="${ui.esc(l.id)}"
+       data-acao="ir:crm-lead:${l.id}" ${ehGanho(l.estagio) ? 'style="border-left:3px solid var(--green)"' : ''}>
+    <div class="crm-lead-emp">${ui.esc(l.empresa)}${(l.item || l.treinamento) ? ' — ' + ui.esc(l.item || l.treinamento) : ''}</div>
     <div class="crm-lead-meta">
       <span>${icone(l.origem?.includes('WhatsApp') ? 'chat' : 'link','sm')} ${ui.esc(l.origem || '—')}</span>
       <span>${icone('user','sm')} ${ui.esc(l.responsavel || 'Sem dono')}</span>
@@ -87,7 +141,7 @@ const cartaoLead = (l) => `
   </div>`;
 
 function etiquetaLead(l) {
-  if (l.estagio === 'ganho') return ui.selo('Ganho', 'ok');
+  if (ehGanho(l.estagio))    return ui.selo('Ganho', 'ok');
   if (!l.responsavel)        return ui.selo('Sem dono', 'neutro');
   const dias = l.parado_desde ? Math.floor((Date.now() - new Date(l.parado_desde)) / 86400000) : 0;
   if (dias >= 7) return ui.selo('Parado', 'atencao');
@@ -99,15 +153,15 @@ function tabela(leads) {
   return ui.tabela({
     selecionavel: true, selecao: _selecao, ordem: _ordem,
     colunas: [
-      { campo:'empresa', rotulo:'Empresa e treinamento',
-        render:(l) => `<div class="prim">${ui.esc(l.empresa)}</div><div class="sub">${ui.esc(l.treinamento)} · ${l.vagas} vagas</div>` },
-      { campo:'estagio', rotulo:'Estágio',
-        render:(l) => ui.selo(rotuloEstagio(l.estagio), l.estagio === 'ganho' ? 'ok' : l.estagio === 'proposta' ? 'marca' : 'neutro') },
+      { campo:'empresa', rotulo:'Empresa e negócio',
+        render:(l) => `<div class="prim">${ui.esc(l.empresa)}</div><div class="sub">${ui.esc(l.item || l.treinamento || '—')}${l.vagas ? ' · ' + l.vagas + ' vagas' : ''}</div>` },
+      { campo:'estagio', rotulo:'Etapa',
+        render:(l) => ui.selo(rotuloEstagio(l.estagio), ehGanho(l.estagio) ? 'ok' : ehAberta(l.estagio) ? 'neutro' : 'neutro') },
       { campo:'responsavel', rotulo:'Responsável', render:(l) => ui.esc(l.responsavel || '—') },
       { campo:'origem', rotulo:'Origem', render:(l) => ui.esc(l.origem || '—') },
       { campo:'valor', rotulo:'Valor', dir:true, render:(l) => `<span class="prim">${ui.fmt.moeda(l.valor)}</span>` },
       { campo:'parado_desde', rotulo:'Parado há', dir:true, render:(l) => {
-          if (l.estagio === 'ganho') return '—';
+          if (!ehAberta(l.estagio)) return '—';
           const d = l.parado_desde ? Math.floor((Date.now() - new Date(l.parado_desde)) / 86400000) : 0;
           return d >= 7 ? `<span style="color:var(--atencao-text);font-weight:600">${d} dias</span>` : (d ? `${d} dias` : 'hoje');
         } }
@@ -120,16 +174,80 @@ function tabela(leads) {
 const listaCelular = (leads) => ui.lista([...leads]
   .sort((a,b) => b.valor - a.valor)
   .map(l => ({
-    titulo: `${l.empresa}${l.treinamento ? ' — ' + l.treinamento : ''}`,
+    titulo: `${l.empresa}${(l.item || l.treinamento) ? ' — ' + (l.item || l.treinamento) : ''}`,
     sub: `${rotuloEstagio(l.estagio)} · ${l.responsavel || 'sem dono'}`,
-    cor: l.estagio === 'ganho' ? '#059669' : l.estagio === 'proposta' ? '#F59E0B' : '#1E2A4A',
+    cor: (etapa(l.estagio) || {}).cor || '#1E2A4A',
     acao: `ir:crm-lead:${l.id}`,
     fim: `<span class="crm-lead-val">${ui.fmt.moeda(l.valor)}</span>`
   })));
 
+/* ── Arrastar e soltar ─────────────────────────────────────────────────────
+   Sem biblioteca: a API nativa de drag do HTML resolve, e uma dependencia
+   externa entraria no caminho critico de uma tela que ja carrega devagar.
+
+   `depois()` e chamado pela plataforma depois de cada render — e o unico lugar
+   onde este modulo toca no DOM. Os ouvintes sao presos ao container recem
+   desenhado; como a tela inteira e redesenhada a cada acao, nada sobrevive
+   para vazar.                                                              */
+export function depois() {
+  if (typeof document === 'undefined') return;
+  const quadros = document.querySelectorAll('.crm-kanban');
+  quadros.forEach(q => {
+    let arrastando = null;
+
+    q.querySelectorAll('.crm-lead-card[draggable="true"]').forEach(card => {
+      card.addEventListener('dragstart', (ev) => {
+        arrastando = card;
+        card.classList.add('arrastando');
+        ev.dataTransfer.effectAllowed = 'move';
+        // Firefox so inicia o arrasto se algo for escrito no dataTransfer.
+        ev.dataTransfer.setData('text/plain', card.dataset.lead || '');
+      });
+      card.addEventListener('dragend', () => {
+        card.classList.remove('arrastando');
+        q.querySelectorAll('.crm-kb-body.sobre').forEach(b => b.classList.remove('sobre'));
+        arrastando = null;
+      });
+    });
+
+    q.querySelectorAll('.crm-kb-body[data-solta]').forEach(zona => {
+      zona.addEventListener('dragover', (ev) => {
+        if (!arrastando) return;
+        ev.preventDefault();                       // sem isto o "drop" nao dispara
+        ev.dataTransfer.dropEffect = 'move';
+        zona.classList.add('sobre');
+      });
+      zona.addEventListener('dragleave', (ev) => {
+        if (!zona.contains(ev.relatedTarget)) zona.classList.remove('sobre');
+      });
+      zona.addEventListener('drop', async (ev) => {
+        ev.preventDefault();
+        zona.classList.remove('sobre');
+        const id = (arrastando?.dataset.lead) || ev.dataTransfer.getData('text/plain');
+        const destino = zona.dataset.solta;
+        if (!id || !destino) return;
+        const origem = arrastando?.closest('.crm-kb-body')?.dataset.solta;
+        if (origem === destino) return;            // soltou onde ja estava
+        // O cartao vai para a coluna nova antes da resposta do banco: a
+        // gravacao e rapida, e ver o cartao voltar sozinho e pior do que
+        // esperar. Se falhar, o redesenho devolve a verdade do banco.
+        zona.appendChild(arrastando);
+        const GRID = (typeof window !== 'undefined') && window.GRID;
+        if (GRID) await GRID.tratarAcao(`crm:mover-lead:${id}:${destino}`);
+      });
+    });
+  });
+}
+
 export function acao(nome, valor, redesenhar) {
   if (nome === 'crm:filtrar-leads') { _busca = valor || ''; redesenhar(); return true; }
   if (nome === 'crm:visao') { _visao = _visao === 'quadro' ? 'tabela' : 'quadro'; redesenhar(); return true; }
+  if (nome === 'crm:funil') {
+    // Trocar de funil recarrega as etapas: toda tela compara estagio contra
+    // ESTAGIOS, que passa a ser o do funil escolhido.
+    dados.usarFunil(valor).then(() => redesenhar()).catch(() => redesenhar());
+    return true;
+  }
   if (nome === 'ordenar')   { _ordem = { campo: valor, desc: !(_ordem.campo === valor && _ordem.desc) }; redesenhar(); return true; }
   if (nome === 'sel')       { _selecao = _selecao.includes(valor) ? _selecao.filter(x => x !== valor) : [..._selecao, valor]; redesenhar(); return true; }
   return false;

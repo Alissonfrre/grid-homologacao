@@ -71,9 +71,15 @@ export function kpis(itens) {
 }
 
 /* ── Cabeçalho de seção ─────────────────────────────────────────────────── */
-export function secao(rotulo, { link, cor } = {}) {
+export function secao(rotulo, { link, cor, contagem } = {}) {
+  /* `link` leva a algum lugar; `contagem` so informa. Link sem acao e ignorado
+     de proposito: ate 05/09 um `acao:''` virava clique que terminava na Home
+     (ver painel.js). Se nao ha destino, nao ha o que clicar. */
+  const temDestino = link && link.acao;
   return `<div class="ds-sec"><span class="rot" ${cor ? `style="color:${cor}"` : ''}>${esc(rotulo)}</span>
-    <div class="linha"></div>${link ? `<span class="link" data-acao="${esc(link.acao)}">${esc(link.rotulo)}</span>` : ''}</div>`;
+    <div class="linha"></div>
+    ${contagem ? `<span class="cnt">${esc(contagem)}</span>` : ''}
+    ${temDestino ? `<span class="link" data-acao="${esc(link.acao)}">${esc(link.rotulo)}</span>` : ''}</div>`;
 }
 
 /* ── Aviso ──────────────────────────────────────────────────────────────────

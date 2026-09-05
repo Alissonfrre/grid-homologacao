@@ -187,3 +187,18 @@
 .ds-esqueleto{height:14px;border-radius:7px;background:linear-gradient(90deg,var(--gray-100) 25%,var(--gray-50) 37%,var(--gray-100) 63%);background-size:400% 100%;animation:ds-brilho 1.3s ease infinite;margin-bottom:var(--sp-2)}
 @keyframes ds-brilho{0%{background-position:100% 50%}100%{background-position:0 50%}}
 @media(prefers-reduced-motion:reduce){.ds-esqueleto{animation:none}}
+
+/* ── 05/09 (h17) — refinamento visual da revisao do CRM ────────────────────
+   Tres mudancas, todas de PESO e nao de paleta: a identidade Navy+Ambar fica
+   como esta; o que muda e quanto de cor aparece e para quantos significados. */
+
+/* Contagem informativa no cabecalho de secao. Nao e link — ate 05/09 esse
+   numero era clicavel e sem destino, e o clique terminava na Home. */
+.ds-sec .cnt{font-size:var(--fs-1);font-weight:700;color:var(--text-3);
+  background:var(--gray-100);border-radius:999px;padding:2px 9px;white-space:nowrap}
+
+/* Sombra marca elevacao real (algo que flutua sobre o resto), nunca acabamento.
+   KPI e cartao em repouso ficam apoiados na borda; a sombra entra no hover de
+   quem e clicavel. Isso tira ~30 sombras simultaneas das telas mais densas. */
+.ds-kpi{box-shadow:none}
+.ds-kpi[data-acao]:hover{box-shadow:var(--shadow);border-color:var(--border-2)}

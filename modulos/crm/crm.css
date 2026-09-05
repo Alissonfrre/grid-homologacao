@@ -22,7 +22,7 @@
 .crm-caixa.ativa .ico{color:var(--navy)}
 .crm-caixa-nome{flex:1;font-size:var(--fs-3);font-weight:600;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .crm-caixa.ativa .crm-caixa-nome{color:var(--navy);font-weight:700}
-.crm-caixa-n{font-size:var(--fs-1);font-weight:700;background:var(--navy);color:#fff;border-radius:999px;padding:1px 7px;min-width:20px;text-align:center;font-variant-numeric:tabular-nums}
+.crm-caixa-n{font-size:var(--fs-1);font-weight:700;background:var(--gray-200);color:var(--text-2);border-radius:999px;padding:1px 7px;min-width:20px;text-align:center;font-variant-numeric:tabular-nums}
 .crm-caixa-n.zero{background:var(--gray-200);color:var(--text-3)}
 .crm-conv{display:flex;gap:var(--sp-3);padding:var(--sp-3);border-bottom:1px solid var(--border);cursor:pointer;position:relative}
 .crm-conv:hover{background:var(--gray-50)}
@@ -34,7 +34,7 @@
 .crm-conv-hora{font-size:var(--fs-1);color:var(--text-3);flex-shrink:0;font-weight:600;font-variant-numeric:tabular-nums}
 .crm-conv-prev{font-size:var(--fs-2);color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
 .crm-conv-meta{display:flex;align-items:center;gap:5px;margin-top:6px;flex-wrap:wrap}
-.crm-conv-nao{position:absolute;right:12px;bottom:12px;background:var(--amber);color:var(--navy);font-size:var(--fs-1);font-weight:700;border-radius:999px;padding:1px 7px;min-width:20px;text-align:center}
+.crm-conv-nao{position:absolute;right:12px;bottom:12px;background:var(--atencao);color:#fff;font-size:var(--fs-1);font-weight:700;border-radius:999px;padding:1px 7px;min-width:20px;text-align:center}
 .crm-tag-caixa{display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-1);font-weight:600;padding:2px 8px;border-radius:999px;background:var(--gray-100);color:var(--text-2)}
 .crm-tag-caixa i{width:6px;height:6px;border-radius:50%;background:var(--navy);display:block;flex-shrink:0}
 .crm-thread{background:var(--bg)}
@@ -83,12 +83,14 @@
 .crm-num-acoes{display:flex;gap:6px;margin-top:var(--sp-3)}
 .crm-kanban-wrap{overflow-x:auto;padding-bottom:var(--sp-1)}
 .crm-kanban{display:grid;grid-template-columns:repeat(5,minmax(232px,1fr));gap:var(--sp-2);min-width:1200px}
-.crm-kb-head{display:flex;align-items:center;gap:var(--sp-2);padding:9px 11px;border-radius:var(--r-md) var(--r-md) 0 0;border-bottom:2px solid}
+.crm-kb-head{display:flex;align-items:center;gap:8px;padding:9px 11px;border-radius:var(--r-md) var(--r-md) 0 0;border-bottom:2px solid;color:var(--text-1)}
+.crm-kb-ponto{width:7px;height:7px;border-radius:50%;flex-shrink:0;display:block}
 .crm-kb-head .nome{font-size:var(--fs-1);font-weight:700;letter-spacing:.05em;text-transform:uppercase}
-.crm-kb-head .tot{margin-left:auto;font-size:var(--fs-1);font-weight:700;font-variant-numeric:tabular-nums;opacity:.85}
-.crm-kb-body{background:var(--gray-50);border:1px solid var(--border);border-top:none;border-radius:0 0 var(--r-md) var(--r-md);padding:var(--sp-2);display:flex;flex-direction:column;gap:var(--sp-2);min-height:280px}
-.crm-lead-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:var(--sp-3);cursor:pointer}
+.crm-kb-head .tot{margin-left:auto;font-size:var(--fs-1);font-weight:700;font-variant-numeric:tabular-nums;color:var(--text-3)}
+.crm-kb-body{background:var(--gray-50);border:1px solid var(--border);border-top:none;border-radius:0 0 var(--r-md) var(--r-md);padding:var(--sp-2);display:flex;flex-direction:column;gap:var(--sp-2);min-height:280px;transition:background .12s,box-shadow .12s}
+.crm-lead-card{background:var(--surface);border:1px solid transparent;border-radius:var(--r-md);padding:var(--sp-3);cursor:grab;box-shadow:0 1px 2px rgba(23,32,56,.06)}
 .crm-lead-card:hover{border-color:var(--border-2);box-shadow:var(--shadow)}
+.crm-lead-card:active{cursor:grabbing}
 .crm-lead-emp{font-size:var(--fs-3);font-weight:700;color:var(--text-1);line-height:1.35}
 .crm-lead-meta{font-size:var(--fs-2);color:var(--text-3);margin-top:6px;display:flex;flex-direction:column;gap:4px}
 .crm-lead-meta span{display:flex;align-items:center;gap:6px}
@@ -131,4 +133,80 @@
 .crm-mob-caixas{display:none;gap:6px;overflow-x:auto;padding:var(--sp-3);border-bottom:1px solid var(--border)}
 .crm-mob-caixa{display:inline-flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--border-2);border-radius:999px;padding:6px 12px;font-size:var(--fs-2);font-weight:600;color:var(--text-2);white-space:nowrap;flex-shrink:0}
 .crm-mob-caixa.ativa{background:var(--navy);border-color:var(--navy);color:#fff}
-.crm-mob-caixa .n{background:var(--amber);color:var(--navy);font-size:11px;font-weight:700;border-radius:999px;padding:0 6px}
+.crm-mob-caixa .n{background:var(--atencao);color:#fff;font-size:11px;font-weight:700;border-radius:999px;padding:0 6px}
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   05/09 (h17) — arrastar-e-soltar, seletor de funis, configuração e quadro
+   de atividades. Tudo com prefixo .crm-, como manda o contrato do módulo.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Arrastar ─────────────────────────────────────────────────────────────
+   Dois estados, e só: o que está sendo levado, e onde ele cai. Mais do que
+   isso vira festa de animação e atrapalha quem está trabalhando. */
+.crm-lead-card.arrastando,.crm-ativ-card.arrastando{opacity:.5;box-shadow:var(--shadow-md);transform:rotate(-1deg)}
+.crm-kb-body.sobre{background:var(--amber-l);box-shadow:inset 0 0 0 2px var(--amber)}
+.crm-kb-col{display:flex;flex-direction:column;min-width:0}
+.crm-kb-vazio{padding:18px 12px;font-size:var(--fs-2);color:var(--text-3);text-align:center;
+  border:1px dashed var(--border-2);border-radius:var(--r-md);background:var(--surface)}
+
+/* ── Trilho de funis ──────────────────────────────────────────────────── */
+.crm-funis-trilho{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:var(--sp-3)}
+.crm-funil-chip{display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-2);font-weight:600;
+  color:var(--text-2);background:var(--surface);border:1px solid var(--border);border-radius:999px;
+  padding:6px 13px;cursor:pointer;white-space:nowrap}
+.crm-funil-chip:hover{border-color:var(--border-2)}
+.crm-funil-chip.ativo{background:var(--navy);border-color:var(--navy);color:#fff}
+.crm-funil-chip .pad{width:5px;height:5px;border-radius:50%;background:var(--amber);display:inline-block}
+
+/* ── Configuração de funil ────────────────────────────────────────────── */
+.crm-cfg{display:grid;grid-template-columns:minmax(0,280px) minmax(0,1fr);gap:var(--sp-4);align-items:start}
+@media(max-width:900px){.crm-cfg{grid-template-columns:1fr}}
+.crm-cfg-funis{display:flex;flex-direction:column;gap:6px}
+.crm-cfg-funil{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);
+  padding:11px 13px;cursor:pointer}
+.crm-cfg-funil:hover{border-color:var(--border-2)}
+.crm-cfg-funil.ativo{border-color:var(--navy);box-shadow:inset 3px 0 0 var(--navy)}
+.crm-cfg-funil .n{font-size:var(--fs-3);font-weight:700;color:var(--text-1)}
+.crm-cfg-funil .s{font-size:var(--fs-2);color:var(--text-3);margin-top:2px}
+.crm-cfg-dica{margin-top:10px;font-size:var(--fs-2);color:var(--text-3);line-height:1.6;
+  padding:10px 12px;background:var(--gray-50);border-radius:var(--r-md)}
+.crm-cfg-nota{font-size:var(--fs-2);color:var(--text-3)}
+.crm-etapa{display:flex;align-items:center;gap:var(--sp-3);padding:11px var(--sp-4);border-bottom:1px solid var(--border)}
+.crm-etapa:last-child{border-bottom:none}
+.crm-etapa-cor{width:28px;height:28px;border-radius:8px;border:1.5px solid;display:flex;
+  align-items:center;justify-content:center;flex-shrink:0}
+.crm-etapa-cor i{width:10px;height:10px;border-radius:3px;display:block}
+.crm-etapa-txt{flex:1;min-width:0}
+.crm-etapa-txt .n{font-size:var(--fs-3);font-weight:600;color:var(--text-1)}
+.crm-etapa-txt .s{font-size:var(--fs-2);color:var(--text-3);margin-top:2px}
+.crm-etapa-txt code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;
+  background:var(--gray-100);border-radius:4px;padding:1px 5px}
+.crm-etapa-acoes{display:flex;gap:4px;flex-shrink:0}
+.crm-etapa-acoes .ds-icobtn[disabled]{opacity:.35;cursor:default}
+.crm-etapas-rod{display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-3) var(--sp-4);
+  border-top:1px solid var(--border);flex-wrap:wrap}
+
+/* Paleta de cores no modal de etapa — radio nativo, sem script. */
+.crm-cores{display:flex;gap:8px;flex-wrap:wrap}
+.crm-cores label{cursor:pointer;line-height:0}
+.crm-cores input{position:absolute;opacity:0;width:0;height:0}
+.crm-cores span{display:block;width:30px;height:30px;border-radius:8px;border:2px solid transparent;
+  box-shadow:0 0 0 1px var(--border)}
+.crm-cores input:checked+span{border-color:var(--surface);box-shadow:0 0 0 2px var(--navy)}
+.crm-cores input:focus-visible+span{outline:2px solid var(--navy);outline-offset:2px}
+
+/* ── Cartão de atividade no quadro ────────────────────────────────────── */
+.crm-ativ-card{background:var(--surface);border:1px solid transparent;border-radius:var(--r-md);
+  padding:11px 12px;cursor:grab;box-shadow:0 1px 2px rgba(23,32,56,.06)}
+.crm-ativ-card:hover{border-color:var(--border-2);box-shadow:var(--shadow)}
+.crm-ativ-card:active{cursor:grabbing}
+.crm-ativ-card.feita .crm-ativ-card-t{color:var(--text-3);text-decoration:line-through}
+.crm-ativ-card-top{display:flex;align-items:flex-start;gap:8px}
+.crm-ativ-card-t{font-size:var(--fs-3);font-weight:600;color:var(--text-1);line-height:1.35}
+.crm-ativ-card-s{font-size:var(--fs-2);color:var(--text-3);margin:5px 0 0 30px;line-height:1.5}
+.crm-ativ-card-rod{display:flex;align-items:center;justify-content:space-between;gap:8px;
+  margin:9px 0 0 30px;font-size:var(--fs-1);color:var(--text-3)}
+.crm-ativ-card-rod .q{font-weight:700;font-variant-numeric:tabular-nums}
+
+@media(max-width:767px){.crm-funis-trilho{overflow-x:auto;flex-wrap:nowrap}}

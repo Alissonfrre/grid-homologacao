@@ -23,14 +23,40 @@ export function iniciar({ sb = null, origem = 'exemplo', exemplo = {} } = {}) {
 /* Em modo banco, carrega as etapas reais do funil padrao da organizacao e
    substitui a lista do nucleo. Feito uma vez, na entrada do modulo — as telas
    comparam etapa a cada render e nao podem esperar consulta. */
-export async function carregarEtapas() {
+/* Coluna que so existe depois do PASSO-32. Enquanto o SQL nao roda, o
+   PostgREST responde 42703 e o CRM continua funcionando com a cor padrao —
+   uma tela nao pode quebrar porque uma migration ainda esta na fila. */
+const _semColuna = (e) => e && (e.code === '42703' || /column .* does not exist/i.test(e.message || ''));
+
+export async function carregarEtapas(funilId = null) {
   if (_origem !== 'banco') return estagios.ESTAGIOS;
-  const { data, error } = await _sb.from('crm_funil_etapas')
-    .select('slug, nome, tipo, ordem, crm_funis!inner(padrao)')
-    .eq('org_id', sessao.orgId()).eq('crm_funis.padrao', true).order('ordem');
+
+  const alvo = funilId || (await funil()).id;
+  const busca = (cols) => _sb.from('crm_funil_etapas').select(cols)
+    .eq('org_id', sessao.orgId()).eq('funil_id', alvo)
+    .is('arquivado_em', null).order('ordem');
+
+  let { data, error } = await busca('id, slug, nome, tipo, ordem, cor');
+  if (_semColuna(error)) {
+    // Sem PASSO-32 ainda: nem `cor` nem `arquivado_em` existem.
+    const r = await _sb.from('crm_funil_etapas').select('id, slug, nome, tipo, ordem')
+      .eq('org_id', sessao.orgId()).eq('funil_id', alvo).order('ordem');
+    data = r.data; error = r.error;
+  }
   if (error) throw error;
-  if (data?.length) estagios.definir(data.map(e => ({ id: e.slug, rotulo: e.nome, tipo: e.tipo })));
+  if (data?.length) estagios.definir(data.map(e => ({
+    id: e.slug, rotulo: e.nome, tipo: e.tipo, cor: e.cor || _corPadraoDaEtapa(e)
+  })));
   return estagios.ESTAGIOS;
+}
+
+/* Cor de partida de uma etapa sem cor gravada: pelo papel dela, nao pela ordem
+   — assim "Ganho" e verde em qualquer funil, inclusive num criado hoje. */
+function _corPadraoDaEtapa(e) {
+  if (e.tipo === 'ganho')   return estagios.CORES.verde;
+  if (e.tipo === 'perdido') return estagios.CORES.cinza;
+  return [estagios.CORES.navy, estagios.CORES.cinza, estagios.CORES.ambar,
+          estagios.CORES.azul, estagios.CORES.roxo][(e.ordem || 1) - 1] || estagios.CORES.navy;
 }
 
 /* ── Tradutores banco → tela ──────────────────────────────────────────────
@@ -46,6 +72,12 @@ const _mapLead = (l) => ({
   contato: l.contato?.nome || null,
   contato_id: l.contato_id,
   treinamento: l.catalogo?.nome || l.treinamento_livre || null,
+  // O que esta sendo vendido, em uma linha. `titulo` (PASSO-32) vence porque e
+  // o campo livre da organizacao; sem ele, cai no curso do catalogo — que e o
+  // caso de quem vende treinamento e nao precisou de outro nome.
+  item: l.titulo || l.catalogo?.nome || l.treinamento_livre || null,
+  titulo: l.titulo || null,
+  funil_id: l.funil_id,
   vagas: l.vagas,
   estagio: l.etapa?.slug || 'novo',
   valor: l.valor == null ? null : Number(l.valor),
@@ -99,7 +131,11 @@ export async function listar(colecao, { filtro = {}, ordem = null } = {}) {
     if (colecao === 'crm_leads') {
       let q = _sb.from('crm_leads').select(SEL_LEAD)
         .eq('org_id', sessao.orgId()).is('excluido_em', null);
-      for (const [k, v] of Object.entries(filtro)) if (v != null && v !== '') q = q.eq(k, v);
+      // Cada funil e um processo comercial proprio: misturar leads de funis
+      // diferentes na mesma tela e o que faria o quadro perder o sentido.
+      const fc = _funilCorrente || (await funil())?.id;
+      if (fc && filtro.funil_id !== null) q = q.eq('funil_id', filtro.funil_id || fc);
+      for (const [k, v] of Object.entries(filtro)) if (v != null && v !== '' && k !== 'funil_id') q = q.eq(k, v);
       const { data, error } = await q;
       if (error) throw error;
       return (data || []).map(_mapLead);
@@ -166,6 +202,12 @@ export async function obter(colecao, id) {
   return data;
 }
 
+/* Em demonstracao nenhuma escrita chega ao banco — nem pode, porque nao ha
+   banco. Devolver "gravado" deixa a tela completar o fluxo (o aviso de modo
+   demonstracao no rodape ja diz que nada persiste), e evita o erro tecnico que
+   aparecia ao arrastar um cartao no modo exemplo. */
+const _simulado = (extra = {}) => ({ ok: true, _naoGravado: true, ...extra });
+
 /* Escrita: em modo exemplo só devolve o que seria gravado, para a tela poder
    ser percorrida inteira sem banco e sem risco de alguém achar que gravou. */
 export async function gravar(colecao, registro) {
@@ -192,20 +234,157 @@ export async function clientes() { return listar('clientes', { ordem: { campo: '
    RLS recusaria; mas mandar o campo certo daqui evita erro confuso na tela.
    ══════════════════════════════════════════════════════════════════════════ */
 
-let _funil = null;   // {id, etapas:[...]} — uma consulta por sessao
+const _cacheFunil = new Map();   // id -> {id, nome, etapas:[...]}
+let _funilCorrente = null;       // qual funil as telas estao operando agora
 
-export async function funilPadrao() {
+export const funilCorrenteId = () => _funilCorrente;
+
+/* Troca o funil que as telas estao usando. Recarrega as etapas, porque toda
+   comparacao de estagio nas telas e feita contra estagios.ESTAGIOS. */
+export async function usarFunil(id) {
+  _funilCorrente = id || null;
+  _cacheFunil.delete(id);
+  const f = await funil(id);
+  estagios.definirFunilCorrente(f);
+  await carregarEtapas(f.id);
+  return f;
+}
+
+/* O funil aberto: o escolhido, ou o padrao da organizacao. */
+export async function funil(id = null) {
   if (_origem !== 'banco') return null;
-  if (_funil) return _funil;
-  const { data: f, error: e1 } = await _sb.from('crm_funis')
-    .select('id').eq('org_id', sessao.orgId()).eq('padrao', true).maybeSingle();
+  const alvo = id || _funilCorrente;
+  if (alvo && _cacheFunil.has(alvo)) return _cacheFunil.get(alvo);
+
+  let q = _sb.from('crm_funis').select('id, nome, padrao').eq('org_id', sessao.orgId());
+  q = alvo ? q.eq('id', alvo) : q.eq('padrao', true);
+  const { data: f, error: e1 } = await q.maybeSingle();
   if (e1) throw e1;
   if (!f) throw new Error('Esta organização ainda não tem um funil configurado.');
-  const { data: et, error: e2 } = await _sb.from('crm_funil_etapas')
-    .select('id, slug, nome, tipo, ordem').eq('funil_id', f.id).order('ordem');
+
+  let { data: et, error: e2 } = await _sb.from('crm_funil_etapas')
+    .select('id, slug, nome, tipo, ordem, cor').eq('funil_id', f.id)
+    .is('arquivado_em', null).order('ordem');
+  if (_semColuna(e2)) {
+    const r = await _sb.from('crm_funil_etapas').select('id, slug, nome, tipo, ordem')
+      .eq('funil_id', f.id).order('ordem');
+    et = r.data; e2 = r.error;
+  }
   if (e2) throw e2;
-  _funil = { id: f.id, etapas: et || [] };
-  return _funil;
+
+  const obj = { id: f.id, nome: f.nome, padrao: f.padrao, etapas: et || [] };
+  _cacheFunil.set(f.id, obj);
+  if (!_funilCorrente) _funilCorrente = f.id;
+  estagios.definirFunilCorrente(obj);
+  return obj;
+}
+
+/* Compatibilidade: o codigo escrito antes de existirem varios funis chama isto. */
+export const funilPadrao = () => funil();
+
+/* Todos os funis da organizacao — alimenta o seletor do topo do quadro e a
+   tela de configuracao. */
+export async function listarFunis() {
+  if (_origem !== 'banco') return [];
+  let { data, error } = await _sb.from('crm_funis')
+    .select('id, nome, padrao, tipo_item').eq('org_id', sessao.orgId())
+    .is('arquivado_em', null).order('padrao', { ascending: false }).order('nome');
+  if (_semColuna(error)) {
+    const r = await _sb.from('crm_funis').select('id, nome, padrao')
+      .eq('org_id', sessao.orgId()).order('nome');
+    data = r.data; error = r.error;
+  }
+  if (error) throw error;
+  return data || [];
+}
+
+/* ── Configuracao de funil e etapas ───────────────────────────────────────
+   Escrita reservada a quem administra; a trava de verdade e a RLS. */
+const _slug = (txt) => String(txt || '').toLowerCase().normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-')
+  .replace(/^-+|-+$/g, '').slice(0, 40) || ('etapa-' + Date.now().toString(36));
+
+export async function salvarFunil(form) {
+  if (_origem !== 'banco') return _simulado();
+
+  const linha = { org_id: sessao.orgId(), nome: (form.nome || '').trim(),
+                  tipo_item: form.tipo_item || null };
+  if (!linha.nome) throw new Error('Informe o nome do funil.');
+  const q = form.id
+    ? _sb.from('crm_funis').update(linha).eq('id', form.id).select('id').single()
+    : _sb.from('crm_funis').insert(linha).select('id').single();
+  const { data, error } = await q;
+  if (error) throw error;
+  _cacheFunil.clear();
+
+  /* Funil novo nasce com as quatro etapas que todo processo comercial tem —
+     um funil sem etapa nenhuma nao e configuravel, e uma tela vazia. A
+     organizacao renomeia, remove e acrescenta a partir daqui. */
+  if (!form.id) {
+    const base = [
+      { nome:'Novo',       tipo:'aberto',  cor:'#1E2A4A' },
+      { nome:'Em contato', tipo:'aberto',  cor:'#8B93A8' },
+      { nome:'Proposta',   tipo:'aberto',  cor:'#B45309' },
+      { nome:'Ganho',      tipo:'ganho',   cor:'#059669' },
+      { nome:'Perdido',    tipo:'perdido', cor:'#8B93A8' }
+    ].map((e, i) => ({ ...e, org_id: sessao.orgId(), funil_id: data.id,
+                       slug: _slug(e.nome), ordem: i + 1 }));
+    const { error: e2 } = await _sb.from('crm_funil_etapas').insert(base);
+    if (e2 && !_semColuna(e2)) throw e2;
+    if (_semColuna(e2)) {
+      await _sb.from('crm_funil_etapas').insert(base.map(({ cor, ...r }) => r));
+    }
+  }
+  return data;
+}
+
+export async function salvarEtapa(form) {
+  if (_origem !== 'banco') return _simulado();
+
+  const linha = {
+    org_id: sessao.orgId(), funil_id: form.funil_id,
+    nome: (form.nome || '').trim(), tipo: form.tipo || 'aberto',
+    cor: form.cor || null, ordem: form.ordem ?? 99
+  };
+  if (!linha.nome) throw new Error('Informe o nome da etapa.');
+  /* O slug nunca muda depois de criado: e ele que os leads guardam, e
+     renomear "Proposta" nao pode mover lead nenhum. */
+  if (!form.id) linha.slug = _slug(linha.nome);
+  const enviar = (l) => form.id
+    ? _sb.from('crm_funil_etapas').update(l).eq('id', form.id).select('id').single()
+    : _sb.from('crm_funil_etapas').insert(l).select('id').single();
+  let { data, error } = await enviar(linha);
+  if (_semColuna(error)) { const { cor, ...semCor } = linha; ({ data, error } = await enviar(semCor)); }
+  if (error) throw error;
+  _cacheFunil.clear();
+  return data;
+}
+
+export async function reordenarEtapas(funilId, idsNaOrdem) {
+  if (_origem !== 'banco') return _simulado();
+
+  for (let i = 0; i < idsNaOrdem.length; i++) {
+    const { error } = await _sb.from('crm_funil_etapas')
+      .update({ ordem: i + 1 }).eq('id', idsNaOrdem[i]);
+    if (error) throw error;
+  }
+  _cacheFunil.clear();
+  return true;
+}
+
+/* Etapa nao e apagada: arquivar preserva o historico dos leads que passaram
+   por ela — mesma regra da exclusao reversivel de lead. */
+export async function arquivarEtapa(id) {
+  if (_origem !== 'banco') return _simulado();
+
+  const { count } = await _sb.from('crm_leads')
+    .select('id', { count: 'exact', head: true }).eq('etapa_id', id).is('excluido_em', null);
+  if (count) throw new Error(`Esta etapa tem ${count} lead${count > 1 ? 's' : ''}. Mova ${count > 1 ? 'eles' : 'ele'} antes de remover a etapa.`);
+  const { error } = await _sb.from('crm_funil_etapas')
+    .update({ arquivado_em: new Date().toISOString() }).eq('id', id);
+  if (error) throw error;
+  _cacheFunil.clear();
+  return true;
 }
 
 const _etapaPorSlug = (funil, slug) => funil.etapas.find(e => e.slug === slug) || funil.etapas[0];
@@ -221,11 +400,13 @@ export async function responsaveis() {
 }
 
 export async function salvarLead(form) {
-  const funil = await funilPadrao();
+  if (_origem !== 'banco') return _simulado();
+
+  const f = await funil(form.funil_id || null);
   const linha = {
     org_id: sessao.orgId(),
-    funil_id: funil.id,
-    etapa_id: _etapaPorSlug(funil, form.estagio || 'novo').id,
+    funil_id: f.id,
+    etapa_id: _etapaPorSlug(f, form.estagio || 'novo').id,
     empresa: (form.empresa || '').trim(),
     vagas: form.vagas ? Number(form.vagas) : null,
     valor: form.valor === '' || form.valor == null ? null : Number(form.valor),
@@ -235,25 +416,37 @@ export async function salvarLead(form) {
     treinamento_livre: form.treinamento_livre || null,
     observacoes: form.observacoes || null
   };
+  /* `titulo` (PASSO-32) e o que o negocio esta vendendo, em texto livre. Ate
+     aqui isso so podia ser um curso do catalogo ou `treinamento_livre` — o que
+     amarrava o CRM a quem vende treinamento. Quem vende outra coisa escreve
+     aqui; quem vende curso continua escolhendo do catalogo. */
+  if (form.titulo != null) linha.titulo = String(form.titulo).trim() || null;
   if (!linha.empresa) throw new Error('Informe a empresa.');
-  const q = form.id
-    ? _sb.from('crm_leads').update(linha).eq('id', form.id).select('id').single()
-    : _sb.from('crm_leads').insert(linha).select('id').single();
-  const { data, error } = await q;
+  const enviar = (l) => form.id
+    ? _sb.from('crm_leads').update(l).eq('id', form.id).select('id').single()
+    : _sb.from('crm_leads').insert(l).select('id').single();
+  let { data, error } = await enviar(linha);
+  if (_semColuna(error)) { const { titulo, ...semTitulo } = linha; ({ data, error } = await enviar(semTitulo)); }
   if (error) throw error;
   return data;
 }
 
-export async function moverLead(id, slug) {
-  const funil = await funilPadrao();
+export async function moverLead(id, slug, funilId = null) {
+  if (_origem !== 'banco') return _simulado();
+
+  const f = await funil(funilId);
+  const etapa = _etapaPorSlug(f, slug);
+  if (!etapa) throw new Error('Etapa não encontrada neste funil.');
   const { error } = await _sb.from('crm_leads')
-    .update({ etapa_id: _etapaPorSlug(funil, slug).id }).eq('id', id);
+    .update({ etapa_id: etapa.id }).eq('id', id);
   if (error) throw error;
   return true;
 }
 
 /* Exclusao reversivel: a linha continua no banco e o historico registra. */
 export async function excluirLead(id) {
+  if (_origem !== 'banco') return _simulado();
+
   const { error } = await _sb.from('crm_leads')
     .update({ excluido_em: new Date().toISOString() }).eq('id', id);
   if (error) throw error;
@@ -261,6 +454,8 @@ export async function excluirLead(id) {
 }
 
 export async function salvarAtividade(form) {
+  if (_origem !== 'banco') return _simulado();
+
   const linha = {
     org_id: sessao.orgId(),
     tipo: form.tipo || 'tarefa',
@@ -280,7 +475,25 @@ export async function salvarAtividade(form) {
   return data;
 }
 
+/* Arrastar uma atividade entre as colunas do quadro. As colunas sao estados de
+   tempo, entao o que muda e a data de vencimento — menos "hoje", que tambem
+   reabre uma atividade ja concluida (arrastar de volta desfaz). */
+export async function reagendarAtividade(id, destino) {
+  if (_origem !== 'banco') return _simulado();
+
+  const d = new Date(); d.setSeconds(0, 0);
+  if (destino === 'feitas') return concluirAtividade(id, true);
+  if (destino === 'hoje')   d.setHours(9, 0, 0, 0);
+  if (destino === 'proximas') { d.setDate(d.getDate() + 1); d.setHours(9, 0, 0, 0); }
+  const { error } = await _sb.from('crm_atividades')
+    .update({ vencimento: d.toISOString(), concluida_em: null }).eq('id', id);
+  if (error) throw error;
+  return true;
+}
+
 export async function concluirAtividade(id, concluir = true) {
+  if (_origem !== 'banco') return _simulado();
+
   const { error } = await _sb.from('crm_atividades')
     .update({ concluida_em: concluir ? new Date().toISOString() : null }).eq('id', id);
   if (error) throw error;
@@ -288,6 +501,8 @@ export async function concluirAtividade(id, concluir = true) {
 }
 
 export async function salvarContato(form) {
+  if (_origem !== 'banco') return _simulado();
+
   const linha = {
     org_id: sessao.orgId(),
     nome: (form.nome || '').trim(),

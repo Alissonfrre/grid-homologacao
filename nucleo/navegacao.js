@@ -181,7 +181,20 @@ export async function tratarAcao(acao) {
   }
 
   if (_telaAberta?.acao) {
-    const tratou = await _telaAberta.acao(nome === 'crm' ? acao : nome, valor, redesenhar);
+    /* ── BUG CORRIGIDO EM 05/09 (h17) ────────────────────────────────────
+       As acoes chegam em duas formas: "nome:valor" (ordenar:valor) e
+       "modulo:nome:valor" (crm:conversa:c3). Antes, qualquer acao comecando
+       com o id do modulo era entregue INTEIRA como nome — entao
+       "crm:conversa:c3" batia contra `nome === 'crm:conversa'` e nunca
+       casava. Resultado: trocar de conversa ou de caixa nao era tratado pela
+       tela, caia no modulo e recebia o aviso "depende do WhatsApp" — a tela
+       de Conversas inteira parecia congelada.
+       Regra agora: o prefixo do modulo faz parte do NOME, nunca do valor. */
+    const p = acao.split(':');
+    const doModulo = _moduloAberto && p[0] === _moduloAberto && p.length > 1;
+    const nomeTela  = doModulo ? p.slice(0, 2).join(':') : nome;
+    const valorTela = doModulo ? p.slice(2).join(':')    : valor;
+    const tratou = await _telaAberta.acao(nomeTela, valorTela, redesenhar);
     if (tratou) return true;
   }
 

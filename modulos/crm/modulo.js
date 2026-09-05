@@ -47,6 +47,13 @@ export default {
       alternativa:{ rotulo:'Ver status dos números', acao:'ir:crm-numeros-status' },
       rota:() => import('./numeros.js') },
 
+    /* Configuracao do funil: chega pelo botao no topo do Funil de vendas, nao
+       pelo menu — e tela de ajuste, nao de trabalho diario. */
+    { id:'crm-funis', rotulo:'Configuração do funil', icone:'settings', oculto:true,
+      perfis:['administrador'], mobile:false,
+      textoDesktop:'Criar funis, renomear etapas e definir cores é trabalho de mesa. No computador esta tela abre direto.',
+      rota:() => import('./funis.js') },
+
     /* Ficha do lead: existe como rota, não como item de menu. */
     { id:'crm-lead', rotulo:'Lead', icone:'funnel', oculto:true,
       perfis:['administrador','comercial'], mobile:true,

@@ -42,6 +42,11 @@ async function gravar(ponte, fn, redesenhar, sucesso) {
 
 async function formLead(ponte, redesenhar, lead = null) {
   const [resps, cursos] = await Promise.all([dados.responsaveis(), dados.listar('catalogo')]);
+  /* O rotulo do que se vende vem do funil, nao do codigo. Uma organizacao que
+     vende servico ve "Serviço"; quem vende curso continua vendo "Treinamento".
+     Sem isso o CRM so servia para quem vende treinamento — que era a critica. */
+  let rotuloItem = 'Treinamento';
+  try { rotuloItem = (await dados.funil())?.tipo_item || 'Treinamento'; } catch { /* modo exemplo */ }
   const opc = (lista, sel, rotuloVazio) =>
     `<option value="">${rotuloVazio}</option>` +
     lista.map(o => `<option value="${esc(o.id)}" ${String(o.id) === String(sel) ? 'selected' : ''}>${esc(o.nome)}</option>`).join('');
@@ -52,10 +57,11 @@ async function formLead(ponte, redesenhar, lead = null) {
       linha('Etapa', `<select id="crmF_estagio" style="${CAMPO}">${ESTAGIOS.map(e => `<option value="${e.id}" ${e.id === (lead?.estagio || 'novo') ? 'selected' : ''}>${esc(e.rotulo)}</option>`).join('')}</select>`),
       linha('Responsável', `<select id="crmF_resp" style="${CAMPO}">${opc(resps, lead?.responsavel_id, 'Sem responsável')}</select>`)
     )}
-    ${linha('Treinamento', `<select id="crmF_curso" style="${CAMPO}">${opc(cursos.filter(c => !c.arquivado), lead?.catalogo_id, 'Fora do catálogo — descrever abaixo')}</select>`)}
+    ${linha('O que está sendo vendido', `<input id="crmF_titulo" style="${CAMPO}" value="${esc(lead?.titulo || '')}" placeholder="Ex.: ${esc(rotuloItem)} para a unidade de Joinville">`)}
+    ${linha(`${esc(rotuloItem)} do catálogo`, `<select id="crmF_curso" style="${CAMPO}">${opc(cursos.filter(c => !c.arquivado), lead?.catalogo_id, 'Nenhum — usar o texto acima')}</select>`)}
     ${linha('Se está fora do catálogo', `<input id="crmF_livre" style="${CAMPO}" value="${esc(lead?.treinamento_livre || '')}" placeholder="Ex.: NR-12 Máquinas">`)}
     ${duas(
-      linha('Vagas', `<input id="crmF_vagas" type="number" min="1" style="${CAMPO}" value="${esc(lead?.vagas ?? '')}">`),
+      linha('Quantidade', `<input id="crmF_vagas" type="number" min="1" style="${CAMPO}" value="${esc(lead?.vagas ?? '')}" placeholder="participantes, itens...">`),
       linha('Valor (R$)', `<input id="crmF_valor" type="number" min="0" step="0.01" style="${CAMPO}" value="${esc(lead?.valor ?? '')}">`)
     )}
     ${linha('Origem', `<input id="crmF_origem" style="${CAMPO}" value="${esc(lead?.origem || '')}" placeholder="WhatsApp, Indicação, Site...">`)}
@@ -64,6 +70,7 @@ async function formLead(ponte, redesenhar, lead = null) {
 
   ponte.aoConfirmar('crmSalvarLead', () => gravar(ponte, () => dados.salvarLead({
     id: lead?.id, empresa: val('crmF_empresa'), estagio: val('crmF_estagio'),
+    titulo: val('crmF_titulo'),
     responsavel_id: val('crmF_resp') || null, catalogo_id: val('crmF_curso') || null,
     treinamento_livre: val('crmF_livre') || null, vagas: val('crmF_vagas'),
     valor: val('crmF_valor'), origem: val('crmF_origem'), observacoes: val('crmF_obs')
@@ -93,24 +100,88 @@ async function formAtividade(ponte, redesenhar, alvoLead = null) {
   }), redesenhar, 'Atividade criada.'));
 }
 
-async function formContato(ponte, redesenhar) {
+async function formContato(ponte, redesenhar, contato = null) {
   const clientes = await dados.clientes();
-  ponte.abrirModal('Novo contato', `
-    ${linha('Nome *', `<input id="crmC_nome" style="${CAMPO}">`)}
+  ponte.abrirModal(contato ? 'Editar contato' : 'Novo contato', `
+    ${linha('Nome *', `<input id="crmC_nome" style="${CAMPO}" value="${esc(contato?.nome || '')}">`)}
     ${duas(
-      linha('Cargo', `<input id="crmC_cargo" style="${CAMPO}">`),
-      linha('Telefone', `<input id="crmC_tel" style="${CAMPO}" placeholder="(47) 99999-0000">`)
+      linha('Cargo', `<input id="crmC_cargo" style="${CAMPO}" value="${esc(contato?.cargo || '')}">`),
+      linha('Telefone', `<input id="crmC_tel" style="${CAMPO}" value="${esc(contato?.telefone || '')}" placeholder="(47) 99999-0000">`)
     )}
-    ${linha('E-mail', `<input id="crmC_email" type="email" style="${CAMPO}">`)}
+    ${linha('E-mail', `<input id="crmC_email" type="email" style="${CAMPO}" value="${esc(contato?.email || '')}">`)}
     ${linha('Empresa cliente', `<select id="crmC_cli" style="${CAMPO}"><option value="">Ainda não é cliente</option>${
-      clientes.map(c => `<option value="${esc(c.id)}">${esc(c.nome)}</option>`).join('')}</select>`)}
-    ${linha('Origem', `<input id="crmC_origem" style="${CAMPO}" placeholder="WhatsApp, Indicação...">`)}
-  `, ponte.botoes('Salvar contato', 'crmSalvarContato'));
+      clientes.map(c => `<option value="${esc(c.id)}" ${String(c.id) === String(contato?.cliente_id) ? 'selected' : ''}>${esc(c.nome)}</option>`).join('')}</select>`)}
+    ${linha('Origem', `<input id="crmC_origem" style="${CAMPO}" value="${esc(contato?.origem || '')}" placeholder="WhatsApp, Indicação...">`)}
+  `, ponte.botoes(contato ? 'Salvar' : 'Salvar contato', 'crmSalvarContato'));
 
   ponte.aoConfirmar('crmSalvarContato', () => gravar(ponte, () => dados.salvarContato({
+    id: contato?.id,
     nome: val('crmC_nome'), cargo: val('crmC_cargo'), telefone: val('crmC_tel'),
     email: val('crmC_email'), cliente_id: val('crmC_cli') || null, origem: val('crmC_origem')
-  }), redesenhar, 'Contato criado.'));
+  }), redesenhar, contato ? 'Contato atualizado.' : 'Contato criado.'));
+}
+
+/* ── Configuracao de funil e etapas (05/09, h17) ──────────────────────────
+   A paleta e fechada de proposito: cor livre por etapa e o caminho mais curto
+   para um quadro que parece um adesivo. Sete tons do proprio sistema bastam
+   para diferenciar cinco colunas. */
+const PALETA = [
+  ['#1E2A4A','Navy'], ['#8B93A8','Cinza'], ['#B45309','Âmbar'],
+  ['#1D4ED8','Azul'], ['#059669','Verde'], ['#6D28D9','Roxo'], ['#BE185D','Rosa']
+];
+
+const seletorDeCor = (sel) => `<div class="crm-cores">${PALETA.map(([hex, nome]) => `
+  <label title="${nome}"><input type="radio" name="crmE_cor" value="${hex}" ${hex === (sel || '#1E2A4A') ? 'checked' : ''}>
+  <span style="background:${hex}"></span></label>`).join('')}</div>`;
+
+const corEscolhida = () => document.querySelector('input[name="crmE_cor"]:checked')?.value || null;
+
+async function formFunil(ponte, redesenhar, funil = null) {
+  ponte.abrirModal(funil ? 'Editar funil' : 'Novo funil', `
+    ${linha('Nome do funil *', `<input id="crmU_nome" style="${CAMPO}" value="${esc(funil?.nome || '')}" placeholder="Ex.: Vendas de treinamento">`)}
+    ${linha('O que este funil vende', `<input id="crmU_item" style="${CAMPO}" value="${esc(funil?.tipo_item || '')}" placeholder="Treinamento, serviço, equipamento...">`)}
+    <div style="font-size:12px;color:var(--text-3);line-height:1.6">
+      Este texto é só o rótulo que aparece no formulário do lead. Um funil novo já nasce com cinco
+      etapas prontas, que você renomeia ou remove em seguida.</div>
+  `, ponte.botoes(funil ? 'Salvar' : 'Criar funil', 'crmSalvarFunil'));
+
+  ponte.aoConfirmar('crmSalvarFunil', () => gravar(ponte, () => dados.salvarFunil({
+    id: funil?.id, nome: val('crmU_nome'), tipo_item: val('crmU_item')
+  }), redesenhar, funil ? 'Funil atualizado.' : 'Funil criado com as etapas iniciais.'));
+}
+
+async function formEtapa(ponte, redesenhar, funilId, etapa = null) {
+  ponte.abrirModal(etapa ? 'Editar etapa' : 'Nova etapa', `
+    ${linha('Nome da etapa *', `<input id="crmE_nome" style="${CAMPO}" value="${esc(etapa?.nome || '')}" placeholder="Ex.: Orçamento enviado">`)}
+    ${linha('Tipo', `<select id="crmE_tipo" style="${CAMPO}">${
+      [['aberto','Em aberto — o negócio segue no funil'],
+       ['ganho','Ganho — fecha o negócio'],
+       ['perdido','Perdido — encerra sem venda']]
+      .map(([v,r]) => `<option value="${v}" ${v === (etapa?.tipo || 'aberto') ? 'selected' : ''}>${r}</option>`).join('')}</select>`)}
+    ${linha('Cor no quadro', seletorDeCor(etapa?.cor))}
+    ${etapa ? `<div style="font-size:12px;color:var(--text-3);line-height:1.6">
+      Identificador interno: <code>${esc(etapa.slug)}</code> — ele não muda, então renomear a etapa
+      não move nenhum lead.</div>` : ''}
+  `, ponte.botoes(etapa ? 'Salvar etapa' : 'Criar etapa', 'crmSalvarEtapa'));
+
+  ponte.aoConfirmar('crmSalvarEtapa', () => gravar(ponte, () => dados.salvarEtapa({
+    id: etapa?.id, funil_id: funilId, nome: val('crmE_nome'),
+    tipo: val('crmE_tipo'), cor: corEscolhida(),
+    ordem: etapa?.ordem
+  }), redesenhar, etapa ? 'Etapa atualizada.' : 'Etapa criada.'));
+}
+
+/* Subir/descer: troca a posicao com a vizinha e regrava a ordem inteira. Com
+   cinco a oito etapas, regravar tudo e mais simples e mais seguro do que
+   calcular o par minimo — e o resultado nunca fica com ordem repetida. */
+async function moverEtapa(ponte, redesenhar, funilId, etapaId, passo) {
+  const f = await dados.funil(funilId);
+  const ids = f.etapas.map(e => e.id);
+  const i = ids.indexOf(etapaId);
+  const j = i + passo;
+  if (i < 0 || j < 0 || j >= ids.length) return;
+  [ids[i], ids[j]] = [ids[j], ids[i]];
+  await gravar(ponte, () => dados.reordenarEtapas(funilId, ids), redesenhar, 'Ordem atualizada.');
 }
 
 /* ── O ponto de entrada que a plataforma chama ────────────────────────────
@@ -119,9 +190,17 @@ async function formContato(ponte, redesenhar) {
 /* Tudo que so existe quando houver gateway de WhatsApp. Tratado aqui, e nao
    deixado cair no "acao desconhecida", para a mensagem ser a verdadeira: nao e
    um botao quebrado, e um recurso que ainda nao existe. */
+/* ── REVISTO EM 05/09 (h17) ────────────────────────────────────────────────
+   Esta lista ficou grande demais e passou a bloquear NAVEGACAO, nao so envio:
+   trocar de caixa (`crm:caixa:`), abrir outra conversa (`crm:conversa:`) e
+   buscar na lista (`crm:buscar-conversa`) sao leitura de dado ja carregado e
+   nao dependem de gateway nenhum. Com elas aqui, a tela de Conversas respondia
+   "depende do WhatsApp" a qualquer clique e parecia congelada.
+   Ficam so as acoes que de fato precisam do gateway existir. */
 const DEPENDE_WHATSAPP = ['crm:nova-conversa', 'crm:conversar:', 'crm:ligar:', 'crm:reconectar:',
   'crm:add-numero', 'crm:horarios', 'crm:respostas', 'crm:importar-contatos', 'crm:anexar',
-  'crm:buscar-conversa', 'crm:caixa:', 'crm:conversa:', 'crm:acesso:', 'crm:enviar'];
+  'crm:acesso:', 'crm:enviar', 'crm:qr', 'crm:modelo:', 'crm:resolver:', 'crm:vincular:',
+  'crm:mais:', 'crm:editar-numero:', 'crm:qr-lido', 'crm:remover:'];
 
 export default async function acoes(acao, { redesenhar }) {
   const ponte = (typeof window !== 'undefined' && window.__GRID_PONTE) || {};
@@ -167,6 +246,56 @@ export default async function acoes(acao, { redesenhar }) {
     const id = resto.replace('excluir-lead:', '');
     const ok = await ponte.confirmar?.('Excluir este lead? Ele sai da lista, mas continua no histórico e pode ser restaurado.');
     if (ok) await gravar(ponte, () => dados.excluirLead(id), redesenhar, 'Lead excluído.');
+    return true;
+  }
+
+  /* Arrastar cartao no quadro. A tela ja moveu o cartao na hora; aqui e a
+     gravacao — e o redesenho traz a verdade do banco de volta. */
+  if (acao.startsWith('crm:mover-lead:')) {
+    const [id, slug] = resto.replace('mover-lead:', '').split(':');
+    await gravar(ponte, () => dados.moverLead(id, slug), redesenhar, 'Negócio movido.');
+    return true;
+  }
+
+  if (acao === 'crm:novo-funil')          { await formFunil(ponte, redesenhar); return true; }
+  if (acao.startsWith('crm:editar-funil:')) {
+    const f = await dados.funil(resto.replace('editar-funil:', ''));
+    await formFunil(ponte, redesenhar, f);
+    return true;
+  }
+  if (acao.startsWith('crm:nova-etapa:'))  { await formEtapa(ponte, redesenhar, resto.replace('nova-etapa:', '')); return true; }
+  if (acao.startsWith('crm:editar-etapa:')) {
+    const [funilId, etapaId] = resto.replace('editar-etapa:', '').split(':');
+    const f = await dados.funil(funilId);
+    await formEtapa(ponte, redesenhar, funilId, f.etapas.find(e => e.id === etapaId));
+    return true;
+  }
+  if (acao.startsWith('crm:subir-etapa:') || acao.startsWith('crm:descer-etapa:')) {
+    const sobe = acao.startsWith('crm:subir-etapa:');
+    const [funilId, etapaId] = resto.replace(sobe ? 'subir-etapa:' : 'descer-etapa:', '').split(':');
+    await moverEtapa(ponte, redesenhar, funilId, etapaId, sobe ? -1 : 1);
+    return true;
+  }
+  if (acao.startsWith('crm:remover-etapa:')) {
+    const id = resto.replace('remover-etapa:', '');
+    const ok = await ponte.confirmar?.('Remover esta etapa do funil? Ela sai do quadro, e o histórico dos leads que passaram por ela continua registrado.');
+    if (ok) await gravar(ponte, () => dados.arquivarEtapa(id), redesenhar, 'Etapa removida do funil.');
+    return true;
+  }
+
+  /* Clique numa linha de Contatos. Ate 05/09 caia em "acao nao esta pronta" —
+     a lista inteira era decorativa. */
+  if (acao.startsWith('crm:contato:')) {
+    const c = await dados.obter('crm_contatos', resto.replace('contato:', ''));
+    if (c) await formContato(ponte, redesenhar, c);
+    else ponte.avisar?.('Contato não encontrado.', 'error');
+    return true;
+  }
+
+  if (acao.startsWith('crm:reagendar:')) {
+    const [id, destino] = resto.replace('reagendar:', '').split(':');
+    const msg = { feitas:'Atividade concluída.', hoje:'Reagendada para hoje.', proximas:'Reagendada para amanhã.' }[destino] || 'Atividade atualizada.';
+    await gravar(ponte, () => dados.reagendarAtividade(id, destino), redesenhar, msg);
     return true;
   }
 
