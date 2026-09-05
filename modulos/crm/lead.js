@@ -15,6 +15,7 @@ export async function render(params = {}) {
 
   const contato    = lead.contato_id ? await dados.obter('crm_contatos', lead.contato_id) : null;
   const atividades = (await dados.listar('crm_atividades')).filter(a => a.lead_id === id);
+  const historico  = await dados.historicoLead(id).catch(() => []);
   // Historico de treinamentos do cliente: vira da integracao entre os modulos
   // (Etapa 5 do plano). Ate la nao ha o que mostrar, e o bloco simplesmente
   // nao aparece — melhor do que exibir numero inventado ao lado de dado real.
@@ -27,7 +28,7 @@ export async function render(params = {}) {
     titulo:`${lead.empresa} — ${lead.treinamento} (${lead.vagas} vagas)`,
     sub:`Responsável ${lead.responsavel || 'não definido'} · ${ui.fmt.moeda(lead.valor)}`,
     acoes:[
-      { rotulo:'Editar', icone:'edit', tipo:'sec', acao:`crm:editar-lead:${id}` },
+      { rotulo:'Editar', icone:'tool', tipo:'sec', acao:`crm:editar-lead:${id}` },
       { rotulo:'Marcar perdido', tipo:'sec', acao:`crm:perdido:${id}` },
       { rotulo:'Marcar ganho', icone:'check', tipo:'pri', acao:`crm:ganho:${id}` }
     ]
@@ -45,7 +46,7 @@ export async function render(params = {}) {
 
   <div class="home-2col" style="grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)">
     <div style="display:flex;flex-direction:column;gap:12px">
-      ${ui.cartao(ui.cartaoTitulo('Linha do tempo','activity') + linhaTempo(lead, contato), { plano:true })}
+      ${ui.cartao(ui.cartaoTitulo('Linha do tempo','activity') + linhaTempo(historico, lead), { plano:true })}
       ${ui.cartao(
         ui.cartaoTitulo('Atividades','calendar',{ rotulo:'Nova', icone:'plus', acao:`crm:nova-atividade:${id}` }) +
         (atividades.length ? atividades.map(itemAtividade).join('') : ui.vazio({ icone:'calendar', titulo:'Nenhuma atividade marcada' })),
@@ -83,18 +84,50 @@ export async function render(params = {}) {
 
 const dado = (k, v) => `<div class="crm-ctx-linha"><span class="k">${k}</span><span class="v">${ui.esc(v)}</span></div>`;
 
-function linhaTempo(lead, contato) {
-  const eventos = [
-    lead.virou_cliente && { ic:'check', cor:'var(--green-l)', t:'Lead ganho — empresa criada em Clientes', s:`Vinculada à tabela compartilhada com o Treinamentos`, q: lead.virou_cliente },
-    { ic:'doc',  cor:'var(--amber-l)', t:'Proposta enviada', s:`${ui.fmt.moeda(lead.valor)} · ${lead.responsavel || '—'}`, q:'2026-09-03T09:58' },
-    contato && { ic:'chat', cor:'var(--blue-l)', t:`Conversa iniciada — ${lead.origem}`, s:contato.nome, q:'2026-09-03T09:41' },
-    { ic:'plus', cor:'var(--gray-100)', t:'Lead criado', s:`Origem: ${lead.origem}`, q:'2026-08-28T16:02' }
-  ].filter(Boolean);
+/* ── CORRIGIDO EM 05/09 (h23) ──────────────────────────────────────────────
+   Esta funcao mostrava uma linha do tempo INVENTADA: tres eventos com datas
+   escritas no codigo ('2026-09-03T09:58'), incluindo um "Proposta enviada" que
+   aparecia em todo lead — inclusive nos que nunca receberam proposta. O banco
+   registra a trilha de verdade desde a Fase A, por gatilho, em
+   crm_lead_historico: quem mudou, o que mudou, de que valor para qual e quando.
+   Agora a tela mostra isso. Onde nao ha registro, nao ha evento — melhor uma
+   linha do tempo curta e verdadeira do que uma longa e inventada. */
+const EVENTO = {
+  criado:   { ic:'plus',  cor:'var(--gray-100)', t:'Negócio criado' },
+  etapa:    { ic:'funnel',cor:'var(--blue-l)',   t:'Mudou de etapa' },
+  alterado: { ic:'tool',  cor:'var(--amber-l)',  t:'Alteração' },
+  ganho:    { ic:'check', cor:'var(--green-l)',  t:'Marcado como ganho' },
+  perdido:  { ic:'close', cor:'var(--red-l)',    t:'Marcado como perdido' },
+  excluido: { ic:'close', cor:'var(--red-l)',    t:'Excluído' },
+  convertido:{ ic:'building', cor:'var(--green-l)', t:'Virou cliente' }
+};
 
-  return eventos.map(e => `<div class="crm-ativ">
-    <span class="crm-ativ-ico" style="background:${e.cor}">${icone(e.ic,'sm')}</span>
-    <div style="flex:1"><div class="crm-ativ-t">${ui.esc(e.t)}</div><div class="crm-ativ-s">${ui.esc(e.s)}</div></div>
-    <span class="crm-ativ-hora">${ui.fmt.data(e.q)}</span></div>`).join('');
+const ROTULO_CAMPO = { valor:'Valor', etapa:'Etapa', responsavel_id:'Responsável',
+                       empresa:'Empresa', titulo:'Negócio', vagas:'Quantidade' };
+
+function linhaTempo(historico, lead) {
+  if (!historico.length) {
+    return ui.vazio({ icone:'activity', titulo:'Sem histórico registrado',
+      sub:'As mudanças de etapa, valor e responsável deste negócio aparecem aqui a partir de agora.' });
+  }
+
+  return historico.map(h => {
+    const e = EVENTO[h.acao] || { ic:'activity', cor:'var(--gray-100)', t: h.acao };
+    const campo = ROTULO_CAMPO[h.campo] || h.campo;
+    /* "de X para Y" so quando os dois lados existem: metade da frase e pior
+       que nenhuma. Valor vem como texto do banco e volta a ser dinheiro aqui. */
+    const fmtLado = (v) => h.campo === 'valor' && v != null && v !== '' ? ui.fmt.moeda(v) : v;
+    const detalhe = (h.de && h.para) ? `${campo}: ${fmtLado(h.de)} → ${fmtLado(h.para)}`
+                  : (h.para ? `${campo}: ${fmtLado(h.para)}` : (campo || ''));
+    return `<div class="crm-ativ">
+      <span class="crm-ativ-ico" style="background:${e.cor}">${icone(e.ic,'sm')}</span>
+      <div style="flex:1">
+        <div class="crm-ativ-t">${ui.esc(e.t)}</div>
+        <div class="crm-ativ-s">${ui.esc(detalhe)}${h.autor ? ' · ' + ui.esc(h.autor) : ''}</div>
+      </div>
+      <span class="crm-ativ-hora" title="${ui.esc(new Date(h.quando).toLocaleString('pt-BR'))}">
+        ${ui.fmt.data(h.quando)} ${ui.fmt.hora(h.quando)}</span></div>`;
+  }).join('');
 }
 
 const itemAtividade = (a) => `<div class="crm-ativ">

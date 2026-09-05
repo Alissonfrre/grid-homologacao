@@ -105,19 +105,36 @@ function paraCampoLocal(iso) {
 }
 
 async function formAtividade(ponte, redesenhar, alvoLead = null, ativ = null) {
-  const [resps, leads] = await Promise.all([
+  const [resps, leads, contatos, clientes] = await Promise.all([
     dados.responsaveis(),
-    dados.listar('crm_leads').catch(() => [])
+    dados.listar('crm_leads').catch(() => []),
+    dados.listar('crm_contatos').catch(() => []),
+    dados.clientes().catch(() => [])
   ]);
   const eu = sessao.usuario() || null;
   const editando = !!ativ;
-  const alvoAtual = ativ?.alvo_tipo === 'lead' ? ativ.alvo_id : (alvoLead || null);
 
   const opcResp = (sel) => `<option value="">Sem responsável</option>` +
     resps.map(r => `<option value="${esc(r.id)}" ${String(r.id) === String(sel) ? 'selected' : ''}>${esc(r.nome)}${eu && r.id === eu.id ? ' (você)' : ''}</option>`).join('');
 
-  const opcLead = (sel) => `<option value="">Nenhum — atividade avulsa</option>` +
-    leads.slice(0, 200).map(l => `<option value="${esc(l.id)}" ${String(l.id) === String(sel) ? 'selected' : ''}>${esc(l.empresa)}${(l.item || l.treinamento) ? ' — ' + esc(l.item || l.treinamento) : ''}</option>`).join('');
+  /* A que isto se refere. Um CRM padrao liga atividade a negocio, pessoa OU
+     empresa — nem toda tarefa nasce de uma oportunidade, e uma organizacao que
+     nao vende treinamento vive quase so de "ligar para a empresa X". O valor
+     carrega o tipo junto ("lead:<id>") para nao precisar de dois campos. */
+  const alvoSel = ativ?.alvo_tipo && ativ?.alvo_id ? `${ativ.alvo_tipo}:${ativ.alvo_id}`
+                : (alvoLead ? `lead:${alvoLead}` : '');
+  const grupo = (rotulo, itens, tipo, texto) => itens.length
+    ? `<optgroup label="${rotulo}">${itens.slice(0, 300).map(i => {
+        const v = `${tipo}:${i.id}`;
+        return `<option value="${esc(v)}" ${v === alvoSel ? 'selected' : ''}>${esc(texto(i))}</option>`;
+      }).join('')}</optgroup>` : '';
+
+  const opcLead = () => `<option value="" ${alvoSel === '' ? 'selected' : ''}>Nenhum — atividade avulsa</option>`
+    + grupo('Negócios em aberto', leads, 'lead',
+        (l) => `${l.empresa}${(l.item || l.treinamento) ? ' — ' + (l.item || l.treinamento) : ''}`)
+    + grupo('Pessoas', contatos, 'contato',
+        (c) => `${c.nome}${c.empresa ? ' · ' + c.empresa : ''}`)
+    + grupo('Empresas', clientes, 'cliente', (e) => e.nome);
 
   const rodapeInfo = editando ? `
     <div style="margin-top:4px;padding-top:12px;border-top:1px solid var(--border);
@@ -135,7 +152,7 @@ async function formAtividade(ponte, redesenhar, alvoLead = null, ativ = null) {
       linha('Vence em', `<input id="crmA_venc" type="datetime-local" style="${CAMPO}" value="${paraCampoLocal(ativ?.vencimento)}">`)
     )}
     ${linha('Responsável — quem vai fazer', `<select id="crmA_resp" style="${CAMPO}">${opcResp(ativ?.responsavel_id)}</select>`)}
-    ${linha('Negócio relacionado', `<select id="crmA_lead" style="${CAMPO}">${opcLead(alvoAtual)}</select>`)}
+    ${linha('Relacionada a', `<select id="crmA_lead" style="${CAMPO}">${opcLead()}</select>`)}
     ${linha('Descrição', `<textarea id="crmA_desc" rows="3" style="${CAMPO}" placeholder="O que precisa ser feito, o que já foi combinado...">${esc(ativ?.descricao || '')}</textarea>`)}
     ${rodapeInfo}
   `, editando
@@ -149,7 +166,8 @@ async function formAtividade(ponte, redesenhar, alvoLead = null, ativ = null) {
     assunto: val('crmA_assunto'), tipo: val('crmA_tipo'),
     vencimento: val('crmA_venc') || null, responsavel_id: val('crmA_resp') || null,
     descricao: val('crmA_desc') || null,
-    alvo_tipo: val('crmA_lead') ? 'lead' : null, alvo_id: val('crmA_lead') || null
+    alvo_tipo: val('crmA_lead') ? val('crmA_lead').split(':')[0] : null,
+    alvo_id:   val('crmA_lead') ? val('crmA_lead').split(':')[1] : null
   }), redesenhar, editando ? 'Atividade atualizada.' : 'Atividade criada.'));
 
   if (editando) {

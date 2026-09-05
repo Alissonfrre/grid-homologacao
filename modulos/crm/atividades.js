@@ -139,7 +139,7 @@ const cartao = (a, eu) => `
       <span class="crm-ativ-ico">${icone(a.concluida ? 'check' : (ICONE_TIPO[a.tipo] || 'activity'), 'sm')}</span>
       <span class="crm-ativ-card-t">${ui.esc(a.titulo)}</span>
     </div>
-    ${a.alvo_nome ? `<div class="crm-ativ-card-alvo">${icone('funnel','sm')} ${ui.esc(a.alvo_nome)}</div>` : ''}
+    ${a.alvo_nome ? `<div class="crm-ativ-card-alvo">${icone({ Negócio:'funnel', Contato:'user', Empresa:'building' }[a.alvo_rotulo] || 'link','sm')} ${ui.esc(a.alvo_nome)}</div>` : ''}
     ${a.sub ? `<div class="crm-ativ-card-s">${ui.esc(a.sub)}</div>` : ''}
     <div class="crm-ativ-card-rod">
       <span class="crm-ativ-quem ${!a.responsavel ? 'sem' : (eu && a.responsavel === eu ? 'meu' : '')}">

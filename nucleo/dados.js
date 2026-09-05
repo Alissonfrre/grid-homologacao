@@ -159,19 +159,43 @@ export async function listar(colecao, { filtro = {}, ordem = null } = {}) {
       /* O alvo e generico (alvo_tipo/alvo_id), entao nao ha FK para o
          PostgREST seguir. Uma consulta so para todos os leads referenciados —
          o alternativo seria uma consulta por atividade. */
-      const idsLead = [...new Set((data || []).filter(a => a.alvo_tipo === 'lead' && a.alvo_id).map(a => a.alvo_id))];
-      let leads = {};
+      /* O alvo e polimorfico — negocio, pessoa ou empresa —, que e o padrao dos
+         CRMs: uma atividade nem sempre nasce de uma oportunidade. "Ligar para o
+         comprador da Metalurgica" pode nao ter negocio nenhum aberto ainda, e
+         uma organizacao que nao vende treinamento pode operar quase so assim.
+         Uma consulta por tipo, nao uma por atividade. */
+      const porTipo = (t) => [...new Set((data || []).filter(a => a.alvo_tipo === t && a.alvo_id).map(a => a.alvo_id))];
+      const idsLead = porTipo('lead'), idsContato = porTipo('contato'), idsCliente = porTipo('cliente');
+      let leads = {}, contatos = {}, clientes = {};
       if (idsLead.length) {
         const { data: ls } = await _sb.from('crm_leads')
           .select('id, empresa, titulo, catalogo:catalogo!crm_leads_catalogo_id_fkey(nome), treinamento_livre')
           .in('id', idsLead);
         for (const l of ls || []) leads[l.id] = l;
       }
+      if (idsContato.length) {
+        const { data: cs } = await _sb.from('contatos').select('id, nome, cliente:clientes(nome)').in('id', idsContato);
+        for (const c of cs || []) contatos[c.id] = c;
+      }
+      if (idsCliente.length) {
+        const { data: es } = await _sb.from('clientes').select('id, nome').in('id', idsCliente);
+        for (const e of es || []) clientes[e.id] = e;
+      }
       // A tela do lead filtra por `lead_id`; o banco guarda alvo_tipo/alvo_id,
       // que e generico de proposito (uma atividade pode apontar para cliente ou
       // contato amanha). A ponte entre as duas formas fica aqui.
       return (data || []).map(a => {
-        const l = a.alvo_tipo === 'lead' ? leads[a.alvo_id] : null;
+        let alvo_nome = null, alvo_rotulo = null;
+        if (a.alvo_tipo === 'lead' && leads[a.alvo_id]) {
+          const l = leads[a.alvo_id];
+          const item = l.titulo || l.catalogo?.nome || l.treinamento_livre;
+          alvo_nome = `${l.empresa}${item ? ' — ' + item : ''}`; alvo_rotulo = 'Negócio';
+        } else if (a.alvo_tipo === 'contato' && contatos[a.alvo_id]) {
+          const c = contatos[a.alvo_id];
+          alvo_nome = `${c.nome}${c.cliente?.nome ? ' · ' + c.cliente.nome : ''}`; alvo_rotulo = 'Contato';
+        } else if (a.alvo_tipo === 'cliente' && clientes[a.alvo_id]) {
+          alvo_nome = clientes[a.alvo_id].nome; alvo_rotulo = 'Empresa';
+        }
         return {
           ...a,
           titulo: a.assunto,
@@ -180,7 +204,7 @@ export async function listar(colecao, { filtro = {}, ordem = null } = {}) {
           responsavel: a.responsavel?.nome || null,
           autor: a.autor?.nome || null,
           lead_id: a.alvo_tipo === 'lead' ? a.alvo_id : null,
-          alvo_nome: l ? `${l.empresa}${(l.titulo || l.catalogo?.nome || l.treinamento_livre) ? ' — ' + (l.titulo || l.catalogo?.nome || l.treinamento_livre) : ''}` : null,
+          alvo_nome, alvo_rotulo,
           concluida: !!a.concluida_em
         };
       });
@@ -532,6 +556,26 @@ export async function salvarAtividade(form) {
 /* Arrastar uma atividade entre as colunas do quadro. As colunas sao estados de
    tempo, entao o que muda e a data de vencimento — menos "hoje", que tambem
    reabre uma atividade ja concluida (arrastar de volta desfaz). */
+/* A trilha real de um negocio: quem mudou o que, e quando. O gatilho do banco
+   grava isto desde a Fase A (crm_lead_historico) — mas a ficha do lead exibia
+   uma linha do tempo INVENTADA, com datas escritas no codigo e um "Proposta
+   enviada" que aparecia ate em lead que nunca recebeu proposta. Mostrar ficcao
+   ao lado de dado real e o jeito mais rapido de perder a confianca de quem
+   confere. */
+export async function historicoLead(leadId) {
+  if (_origem !== 'banco') return [];
+  const { data, error } = await _sb.from('crm_lead_historico')
+    .select('acao, campo, valor_anterior, valor_novo, registrado_em, quem:usuarios!crm_lead_historico_autor_fkey(nome)')
+    .eq('org_id', sessao.orgId()).eq('lead_id', leadId)
+    .order('registrado_em', { ascending: false }).limit(50);
+  if (error) throw error;
+  return (data || []).map(h => ({
+    acao: h.acao, campo: h.campo,
+    de: h.valor_anterior, para: h.valor_novo,
+    quando: h.registrado_em, autor: h.quem?.nome || null
+  }));
+}
+
 export async function obterAtividade(id) {
   if (_origem !== 'banco') return (_exemplo['crm_atividades'] || []).find(a => a.id === id) || null;
   const { data, error } = await _sb.from('crm_atividades')
