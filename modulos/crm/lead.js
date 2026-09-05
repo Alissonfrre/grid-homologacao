@@ -62,7 +62,7 @@ export async function render(params = {}) {
           ? `<div class="crm-ctx-linha"><span class="k">Empresa</span>
                <span class="v"><span class="crm-link" data-acao="ir:crm-empresa:${ui.esc(lead.cliente_id)}">${ui.esc(lead.empresa)} ${icone('chevronright','sm')}</span></span></div>`
           : dado('Empresa', lead.empresa)}
-        ${lead.previsao ? dado('Previsão de fechamento', new Date(lead.previsao + 'T12:00').toLocaleDateString('pt-BR')) : ''}
+        ${lead.previsao ? dado('Previsão de fechamento', ui.dataLocal(lead.previsao).toLocaleDateString('pt-BR')) : ''}
         ${lead.motivo_perda ? dado('Motivo da perda', lead.motivo_perda) : ''}
         ${lead.motivo_perda_obs ? dado('Detalhe da perda', lead.motivo_perda_obs) : ''}
         ${dado('Contato', contato?.nome || '—')}

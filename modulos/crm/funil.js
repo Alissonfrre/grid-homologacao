@@ -65,12 +65,12 @@ export async function render() {
   /* Previsao do mes corrente, calculada sobre os leads ja carregados — sem
      consulta nova. So conta negocio aberto: previsao de negocio ganho e
      historia, nao previsao. */
-  const hoje0 = new Date(); hoje0.setHours(0,0,0,0);
+  const hoje0 = ui.hojeLocal();
   const fimMes = new Date(hoje0.getFullYear(), hoje0.getMonth() + 1, 0);
   const comData = abertos.filter(l => l.previsao);
-  const noMes = comData.filter(l => new Date(l.previsao + 'T12:00') <= fimMes);
+  const noMes = comData.filter(l => ui.dataLocal(l.previsao) <= fimMes);
   const previsaoMes = { total: noMes.length, valor: soma(noMes),
-                        vencidos: comData.filter(l => new Date(l.previsao + 'T12:00') < hoje0).length };
+                        vencidos: comData.filter(l => ui.diasAte(l.previsao) < 0).length };
 
   const acoes = celular
     ? [{ rotulo:'Novo lead', icone:'plus', tipo:'pri', acao:'crm:novo-lead' }]
@@ -171,9 +171,8 @@ const cartaoLead = (l) => `
    quadro: e onde o comercial esta se enganando sobre o proprio mes. */
 function previsaoNoCartao(l) {
   if (!l.previsao || ehGanho(l.estagio)) return '';
-  const d = new Date(l.previsao + 'T12:00');
-  const hoje = new Date(); hoje.setHours(0,0,0,0);
-  const dias = Math.round((d - hoje) / 86400000);
+  const d = ui.dataLocal(l.previsao);
+  const dias = ui.diasAte(l.previsao);
   const estado = dias < 0 ? 'vencida' : dias <= 3 ? 'perto' : '';
   const texto = dias < 0 ? `Previsão venceu há ${Math.abs(dias)} dia${Math.abs(dias)>1?'s':''}`
               : dias === 0 ? 'Previsão para hoje'
@@ -204,10 +203,8 @@ function tabela(leads) {
       { campo:'valor', rotulo:'Valor', dir:true, render:(l) => `<span class="prim">${ui.fmt.moeda(l.valor)}</span>` },
       { campo:'previsao', rotulo:'Previsão', dir:true, render:(l) => {
           if (!l.previsao) return `<span style="color:var(--text-3)">—</span>`;
-          const d = new Date(l.previsao + 'T12:00');
-          const hoje = new Date(); hoje.setHours(0,0,0,0);
-          const txt = d.toLocaleDateString('pt-BR',{ day:'2-digit', month:'2-digit' });
-          return d < hoje && ehAberta(l.estagio)
+          const txt = ui.dataLocal(l.previsao).toLocaleDateString('pt-BR',{ day:'2-digit', month:'2-digit' });
+          return ui.diasAte(l.previsao) < 0 && ehAberta(l.estagio)
             ? `<span style="color:var(--atencao-text);font-weight:600">${txt}</span>` : txt;
         } },
       { campo:'parado_desde', rotulo:'Parado há', dir:true, render:(l) => {

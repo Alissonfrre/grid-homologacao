@@ -26,13 +26,13 @@ export async function render() {
   /* Previsao: so negocio aberto com data. E "perdemos por que": agrupamento
      dos negocios perdidos por motivo, do mais frequente para o menos. Os dois
      saem dos leads ja carregados — nenhuma consulta a mais no painel. */
-  const hoje0 = new Date(); hoje0.setHours(0,0,0,0);
+  const hoje0 = ui.hojeLocal();
   const fimMes = new Date(hoje0.getFullYear(), hoje0.getMonth() + 1, 0);
   const comData = abertos.filter(l => l.previsao);
-  const noMes = comData.filter(l => new Date(l.previsao + 'T12:00') <= fimMes);
+  const noMes = comData.filter(l => ui.dataLocal(l.previsao) <= fimMes);
   const previsao = {
     total: noMes.length, valor: soma(noMes),
-    vencidos: comData.filter(l => new Date(l.previsao + 'T12:00') < hoje0).length,
+    vencidos: comData.filter(l => ui.diasAte(l.previsao) < 0).length,
     semData: abertos.filter(l => !l.previsao).length
   };
 

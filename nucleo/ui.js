@@ -38,6 +38,27 @@ export const fmt = {
   iniciais: (nome) => String(nome || '?').trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase()
 };
 
+/* ── CORRIGIDO EM 05/09 (h26) ──────────────────────────────────────────────
+   Uma data pura ("2026-09-03") virava `new Date(d + 'T12:00')` — meio-dia — e
+   a diferenca para hoje 00:00 dava 1,5 dia, que `Math.round` transformava em
+   1. Marcar previsao para dois dias atras mostrava "venceu há 1 dia".
+   Data pura vira meia-noite local, e a diferenca passa a ser numero inteiro
+   de dias. Um lugar so, porque a conta aparecia em quatro. */
+export const dataLocal = (aaaammdd) => {
+  if (!aaaammdd) return null;
+  const [a, m, d] = String(aaaammdd).slice(0, 10).split('-').map(Number);
+  if (!a || !m || !d) return null;
+  return new Date(a, m - 1, d);          // meia-noite no fuso de quem olha
+};
+
+export const hojeLocal = () => { const d = new Date(); d.setHours(0,0,0,0); return d; };
+
+/* Dias inteiros entre uma data pura e hoje. Negativo = ja passou. */
+export const diasAte = (aaaammdd) => {
+  const d = dataLocal(aaaammdd);
+  return d ? Math.round((d - hojeLocal()) / 86400000) : null;
+};
+
 /* ── Cabeçalho de tela ──────────────────────────────────────────────────────
    modulo → a linha de cima (some quando a organização tem um módulo só)   */
 export function topo({ modulo, moduloIcone, titulo, sub, acoes = [], voltar }) {
