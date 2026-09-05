@@ -33,9 +33,9 @@ export async function render(params = {}) {
   ${ui.topo({
     voltar:{ rotulo:'Empresas', acao:'ir:crm-empresa' },
     titulo: cliente.nome,
-    sub: [cliente.cnpj ? 'CNPJ ' + ui.esc(cliente.cnpj) : null,
+    sub: [cliente.naoCadastrada ? 'Ainda não cadastrada em Clientes' : (cliente.cnpj ? 'CNPJ ' + ui.esc(cliente.cnpj) : 'sem CNPJ'),
           cliente.cidade || null,
-          resumo.primeiroContato ? 'cliente desde ' + ui.fmt.data(resumo.primeiroContato) : null]
+          resumo.primeiroContato ? 'primeiro negócio em ' + ui.fmt.data(resumo.primeiroContato) : null]
          .filter(Boolean).join(' · '),
     acoes:[{ rotulo:'Novo negócio', icone:'plus', tipo:'pri', acao:'crm:novo-lead' }]
   })}
@@ -78,6 +78,10 @@ export async function render(params = {}) {
             </div></div>`).join('')
           : ui.vazio({ icone:'user', titulo:'Nenhuma pessoa cadastrada' })), { plano:true })}
 
+      ${cliente.naoCadastrada ? ui.aviso({ tipo:'info', icone:'building',
+          titulo:'Empresa ainda não cadastrada em Clientes',
+          texto:'O histórico comercial aparece aqui pelo nome. O cadastro é feito em Clientes, no Treinamentos — o CRM não cria empresa sozinho.' }) : ''}
+
       ${abertos.length ? ui.aviso({ tipo:'info', icone:'info',
           titulo:`${abertos.length} negócio${abertos.length>1?'s':''} em aberto`,
           texto:'Vale olhar o histórico antes de falar com o cliente.' }) : ''}
@@ -103,7 +107,8 @@ async function listaDeEmpresas() {
   let lista = todas;
   if (_situacao === 'abertos')  lista = lista.filter(e => e.abertos > 0);
   if (_situacao === 'clientes') lista = lista.filter(e => e.ganhos > 0);
-  if (_situacao === 'sem-cnpj') lista = lista.filter(e => !e.cnpj);
+  if (_situacao === 'sem-cnpj') lista = lista.filter(e => !e.cnpj && !e.naoCadastrada);
+  if (_situacao === 'nao-cadastradas') lista = lista.filter(e => e.naoCadastrada);
   if (_busca) {
     const t = chaveBusca(_busca);
     lista = lista.filter(e => chaveBusca(e.nome).includes(t) || chaveBusca(e.cnpj).includes(t)
@@ -142,7 +147,8 @@ async function listaDeEmpresas() {
         { v:'', r:'Todas as empresas' },
         { v:'abertos',  r:'Com negócio em aberto' },
         { v:'clientes', r:'Que já compraram' },
-        { v:'sem-cnpj', r:'Sem CNPJ cadastrado' }
+        { v:'sem-cnpj',    r:'Sem CNPJ cadastrado' },
+        { v:'nao-cadastradas', r:'Ainda não cadastradas em Clientes' }
       ] },
       { id:'crmEmpCidade', acao:'crm:emp-cidade', valor:_cidade,
         opcoes:[{ v:'', r:'Todas as cidades' }, ...cidades.map(c => ({ v:c, r:c }))] }
@@ -151,11 +157,13 @@ async function listaDeEmpresas() {
 
   ${lista.length ? ui.tabela({
     ordem: _ordem,
-    acaoLinha: (e) => `ir:crm-empresa:${e.id}`,
+    acaoLinha: (e) => `ir:crm-empresa:${e.chaveConta}`,
     colunas:[
       { campo:'nome', rotulo:'Empresa',
         render:(e) => `<div class="prim">${ui.esc(e.nome)}</div>
-          <div class="sub">${e.cnpj ? 'CNPJ ' + ui.esc(e.cnpj) : 'sem CNPJ'}${e.cidade ? ' · ' + ui.esc(e.cidade) : ''}</div>` },
+          <div class="sub">${e.naoCadastrada
+            ? '<span style="color:var(--text-3)">ainda não cadastrada em Clientes</span>'
+            : (e.cnpj ? 'CNPJ ' + ui.esc(e.cnpj) : 'sem CNPJ') + (e.cidade ? ' · ' + ui.esc(e.cidade) : '')}</div>` },
       { campo:'abertos', rotulo:'Em aberto', dir:true,
         render:(e) => e.abertos ? `<span class="prim">${e.abertos}</span>` : `<span style="color:var(--text-3)">—</span>` },
       { campo:'ganhos', rotulo:'Fechados', dir:true,

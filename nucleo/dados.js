@@ -666,14 +666,23 @@ export async function salvarAtividade(form) {
    ideia de "conta" dos CRMs de mercado, feita sobre o que ja existe — sem
    coluna nova e sem migrar dado.
    ══════════════════════════════════════════════════════════════════════════ */
-export async function fichaEmpresa(clienteId) {
+export async function fichaEmpresa(ref) {
   if (_origem !== 'banco') return null;
   const org = sessao.orgId();
 
-  const { data: cli, error } = await _sb.from('clientes')
-    .select('*').eq('org_id', org).eq('id', clienteId).maybeSingle();
-  if (error) throw error;
-  if (!cli) return null;
+  /* `ref` e o id do cliente, ou "nome:<slug>" para a conta que ainda nao esta
+     cadastrada. A ficha e a mesma nos dois casos — o que muda e de onde vem o
+     cabecalho. */
+  const porNome = String(ref || '').startsWith('nome:');
+  let cli = null, clienteId = porNome ? null : ref;
+
+  if (!porNome) {
+    const { data, error } = await _sb.from('clientes')
+      .select('*').eq('org_id', org).eq('id', ref).maybeSingle();
+    if (error) throw error;
+    cli = data;
+  }
+  if (!cli && !porNome) return null;
 
   const [negocios, contatos, atividades] = await Promise.all([
     listar('crm_leads', { filtro: { funil_id: null } }).catch(() => []),
@@ -686,23 +695,29 @@ export async function fichaEmpresa(clienteId) {
      vende — e sao duas para o banco. */
   const chave = (t) => String(t || '').toLowerCase().normalize('NFD')
     .replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '');
-  const alvo = chave(cli.nome);
-  const daEmpresa = (l) => l.cliente_id === clienteId || (alvo && chave(l.empresa) === alvo);
+  const alvo = porNome ? String(ref).slice(5) : chave(cli.nome);
+  const daEmpresa = (l) => (clienteId && l.cliente_id === clienteId) || (alvo && chave(l.empresa) === alvo);
 
   const meus = negocios.filter(daEmpresa);
   const idsMeus = new Set(meus.map(l => l.id));
-  const meusContatos = contatos.filter(c => c.cliente_id === clienteId);
+  const meusContatos = clienteId ? contatos.filter(c => c.cliente_id === clienteId) : [];
   const idsContato = new Set(meusContatos.map(c => c.id));
 
   const minhasAtividades = atividades.filter(a =>
        (a.alvo_tipo === 'lead' && idsMeus.has(a.alvo_id))
-    || (a.alvo_tipo === 'cliente' && a.alvo_id === clienteId)
+    || (a.alvo_tipo === 'cliente' && clienteId && a.alvo_id === clienteId)
     || (a.alvo_tipo === 'contato' && idsContato.has(a.alvo_id)));
 
   const soma = (arr) => arr.reduce((s, l) => s + (l.valor || 0), 0);
   const ganhos   = meus.filter(l => estagios.ehGanho(l.estagio));
   const perdidos = meus.filter(l => estagios.ehPerdido(l.estagio));
   const abertos  = meus.filter(l => estagios.ehAberta(l.estagio));
+
+  /* Conta sem cadastro: o cabecalho vem do proprio negocio. */
+  if (!cli) {
+    const primeiro = negocios.find(daEmpresa);
+    cli = { id: null, nome: primeiro?.empresa || 'Empresa sem cadastro', naoCadastrada: true };
+  }
 
   return {
     cliente: cli,
@@ -718,7 +733,19 @@ export async function fichaEmpresa(clienteId) {
   };
 }
 
-/* Empresas com movimento no CRM, para a lista da ficha. */
+/* Empresas com movimento no CRM.
+   ── AJUSTE DE 05/09 ───────────────────────────────────────────────────────
+   A primeira versao so listava empresa que existisse em `clientes`. Como o
+   `cliente_id` do negocio so e preenchido na conversao, o resultado era o
+   oposto do util: a lista mostrava **apenas quem ja comprou**, e nenhuma
+   empresa com negocio em aberto — que e exatamente quem o comercial precisa
+   ver antes de ligar.
+
+   Agora a conta existe desde o primeiro negocio, mesmo sem cadastro: quem nao
+   esta em `clientes` entra como conta **não cadastrada**, agrupada pelo nome
+   normalizado. Nada e criado no banco — e agrupamento de leitura, respeitando
+   a regra de que quem manda em `clientes` e o Treinamentos e o SOC
+   (05-Decisoes/2026-09-05-crm-nao-pode-impactar-treinamentos-e-soc.md). */
 export async function empresasDoCrm() {
   if (_origem !== 'banco') return [];
   const [cli, leads] = await Promise.all([clientes(), listar('crm_leads').catch(() => [])]);
@@ -727,9 +754,13 @@ export async function empresasDoCrm() {
   const porNome = new Map(cli.map(c => [chave(c.nome), c]));
   const contagem = new Map();
   for (const l of leads) {
-    const c = (l.cliente_id && cli.find(x => x.id === l.cliente_id)) || porNome.get(chave(l.empresa));
+    let c = (l.cliente_id && cli.find(x => x.id === l.cliente_id)) || porNome.get(chave(l.empresa));
+    /* Sem cadastro: a conta existe assim mesmo, identificada pelo nome. */
+    if (!c && l.empresa) c = { id: null, nome: l.empresa, cnpj: null, cidade: null,
+                               chaveNome: chave(l.empresa), naoCadastrada: true };
     if (!c) continue;
-    const r = contagem.get(c.id) || { ...c, negocios: 0, valor: 0, abertos: 0, ganhos: 0, perdidos: 0, ultimo: null };
+    const chaveConta = c.id || ('nome:' + chave(c.nome));
+    const r = contagem.get(chaveConta) || { ...c, chaveConta, negocios: 0, valor: 0, abertos: 0, ganhos: 0, perdidos: 0, ultimo: null };
     r.negocios++;
     r.valor += (l.valor || 0);
     if (estagios.ehAberta(l.estagio))  r.abertos++;
@@ -739,7 +770,7 @@ export async function empresasDoCrm() {
        com esta empresa?" — a pergunta que decide quem receber ligacao hoje. */
     const quando = l.parado_desde || l.criado_em;
     if (quando && (!r.ultimo || new Date(quando) > new Date(r.ultimo))) r.ultimo = quando;
-    contagem.set(c.id, r);
+    contagem.set(chaveConta, r);
   }
   return [...contagem.values()].sort((a, b) => b.valor - a.valor);
 }
