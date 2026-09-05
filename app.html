@@ -3745,8 +3745,22 @@ async function _iniciarPlataforma() {
       }
     });
     nucleo.GRID.aoNavegar((rota, params) => irPara(rota, params));
-    const dados  = await import('./nucleo/dados.js?v=' + APP_BUILD);
-    const sessao = await import('./nucleo/sessao.js?v=' + APP_BUILD);
+    // ── BUG CORRIGIDO EM 04/09 (h16) ────────────────────────────────────
+    // Antes, dados.js e sessao.js eram importados aqui com `?v=` na URL:
+    //     import('./nucleo/dados.js?v=h15')
+    // enquanto as TELAS importam sem query:
+    //     import '../../nucleo/dados.js'
+    // Para o navegador, URLs diferentes sao MODULOS DIFERENTES. Havia duas
+    // copias de dados.js em memoria: eu configurava uma (origem 'banco', com o
+    // cliente do Supabase) e as telas liam a outra, nunca configurada, em modo
+    // exemplo e com o conjunto vazio.
+    // Sintoma: funil sem nenhum lead com 2.060 no banco, e "Cannot read
+    // properties of null (reading 'id')" ao salvar — funilPadrao() devolve null
+    // fora do modo banco.
+    // Correcao: pegar as instancias DE DENTRO da plataforma, que importa por
+    // caminho relativo — o mesmo caminho das telas. Uma instancia so, sempre.
+    const dados  = nucleo.GRID.dados;
+    const sessao = nucleo.GRID.sessao;
     sessao.iniciar({
       usuario: { id: usuarioAtual.id, nome: usuarioAtual.nome, perfil: usuarioAtual.perfil,
                  org_id: usuarioAtual.org_id, org: usuarioAtual.orgNome },
@@ -3754,7 +3768,9 @@ async function _iniciarPlataforma() {
     });
     // WhatsApp ainda nao tem tabela: conversas e numeros seguem em demonstracao
     // mesmo com o banco ligado (ver SO_EXEMPLO em nucleo/dados.js).
-    const { EXEMPLO } = await import('./modulos/crm/exemplo.js?v=' + APP_BUILD);
+    // Sem `?v=` pelo mesmo motivo acima: as telas de conversa importam este
+    // arquivo por caminho relativo, e duas copias seriam dois conjuntos de dados.
+    const { EXEMPLO } = await import('./modulos/crm/exemplo.js');
     dados.iniciar({ sb, origem: 'banco', exemplo: EXEMPLO });
     console.info('[modulos] nucleo carregado');
 
@@ -27146,7 +27162,7 @@ async function exportarRelatorioComparativoPDF() {
   // cache do navegador. Agora o nome do cache deriva de APP_BUILD, que
   // muda a cada publicação, e o activate do sw.js apaga os caches
   // anteriores sozinho.
-  var APP_BUILD = 'h15';
+  var APP_BUILD = 'h16';
   window.APP_BUILD = APP_BUILD;
 
   function _mostrarBannerAtualizacao(){
