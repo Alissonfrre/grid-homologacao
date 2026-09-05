@@ -21,6 +21,8 @@ import { ESTAGIOS, rotuloEstagio, etapa, fundoDe, ehAberta, ehGanho } from '../.
 import { avisoDemo } from './painel.js';
 
 let _busca = '';
+let _resp = '';                              // filtro de responsável
+let _origem = '';                            // filtro de origem
 let _visao = 'quadro';                       // 'quadro' | 'tabela'
 let _ordem = { campo:'valor', desc:true };
 let _selecao = [];
@@ -34,6 +36,14 @@ export async function render() {
   let leads = await dados.listar('crm_leads');
   // A busca cobre o que a pessoa tem na cabeca quando procura um negocio:
   // empresa, o que esta sendo vendido, responsavel e origem.
+  /* Os dois selects abaixo existiam desde a primeira versao e nao filtravam
+     nada — `ui.filtros` os desenhava sem acao. Escolher "Marina Alves" e a
+     lista continuar igual e o tipo de detalhe que faz o sistema parecer
+     enfeite. Agora filtram, e a escolha sobrevive ao redesenho. */
+  const todosResp   = [...new Set(leads.map(l => l.responsavel).filter(Boolean))].sort();
+  const todasOrigens = [...new Set(leads.map(l => l.origem).filter(Boolean))].sort();
+  if (_resp)   leads = leads.filter(l => l.responsavel === _resp);
+  if (_origem) leads = leads.filter(l => l.origem === _origem);
   if (_busca) {
     const t = _busca.toLowerCase();
     leads = leads.filter(l => [l.empresa, l.item || l.treinamento, l.responsavel, l.origem]
@@ -81,8 +91,10 @@ export async function render() {
   ${ui.filtros({
     busca:{ id:'crmBuscaLead', placeholder:'Buscar empresa, contato ou negócio', acao:'crm:filtrar-leads' },
     selects:[
-      { id:'crmFiltroResp',    opcoes:['Todos os responsáveis', ...new Set(leads.map(l=>l.responsavel).filter(Boolean))] },
-      { id:'crmFiltroOrigem',  opcoes:['Todas as origens', ...new Set(leads.map(l=>l.origem).filter(Boolean))] }
+      { id:'crmFiltroResp', acao:'crm:filtro-resp', valor:_resp,
+        opcoes:[{ v:'', r:'Todos os responsáveis' }, ...todosResp.map(x => ({ v:x, r:x }))] },
+      { id:'crmFiltroOrigem', acao:'crm:filtro-origem', valor:_origem,
+        opcoes:[{ v:'', r:'Todas as origens' }, ...todasOrigens.map(x => ({ v:x, r:x }))] }
     ]
   })}
 
@@ -241,6 +253,8 @@ export function depois() {
 
 export function acao(nome, valor, redesenhar) {
   if (nome === 'crm:filtrar-leads') { _busca = valor || ''; redesenhar(); return true; }
+  if (nome === 'crm:filtro-resp')   { _resp = valor || '';   redesenhar(); return true; }
+  if (nome === 'crm:filtro-origem') { _origem = valor || ''; redesenhar(); return true; }
   if (nome === 'crm:visao') { _visao = _visao === 'quadro' ? 'tabela' : 'quadro'; redesenhar(); return true; }
   if (nome === 'crm:funil') {
     // Trocar de funil recarrega as etapas: toda tela compara estagio contra

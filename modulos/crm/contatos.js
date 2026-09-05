@@ -9,9 +9,17 @@ import * as sessao from '../../nucleo/sessao.js';
 import { avisoDemo } from './painel.js';
 
 let _ordem = { campo:'nome', desc:false };
+let _fEmpresa = '';
+let _fOrigem  = '';
 
 export async function render() {
   let contatos = await dados.listar('crm_contatos');
+  // Listas montadas ANTES de filtrar: um filtro que some da lista depois de
+  // usado impede a pessoa de voltar atras.
+  const todasEmpresas = [...new Set(contatos.map(c => c.empresa).filter(Boolean))].sort();
+  const todasOrigens  = [...new Set(contatos.map(c => c.origem).filter(Boolean))].sort();
+  if (_fEmpresa) contatos = contatos.filter(c => c.empresa === _fEmpresa);
+  if (_fOrigem)  contatos = contatos.filter(c => c.origem === _fOrigem);
   if (_busca) {
     const t = _busca.toLowerCase();
     contatos = contatos.filter(c => [c.nome, c.empresa, c.cargo, c.telefone]
@@ -40,8 +48,10 @@ export async function render() {
   ${ui.filtros({
     busca:{ id:'crmBuscaContato', placeholder:'Buscar por nome, telefone ou empresa', acao:'crm:filtrar-contatos' },
     selects: celular ? [] : [
-      { id:'crmFiltroEmpresa', opcoes:['Todas as empresas', ...new Set(contatos.map(c => c.empresa).filter(Boolean))] },
-      { id:'crmFiltroOrigem',  opcoes:['Todas as origens',  ...new Set(contatos.map(c => c.origem).filter(Boolean))] }
+      { id:'crmFiltroEmpresa', acao:'crm:filtro-empresa', valor:_fEmpresa,
+        opcoes:[{ v:'', r:'Todas as empresas' }, ...todasEmpresas.map(x => ({ v:x, r:x }))] },
+      { id:'crmFiltroOrigem', acao:'crm:filtro-orig-contato', valor:_fOrigem,
+        opcoes:[{ v:'', r:'Todas as origens' }, ...todasOrigens.map(x => ({ v:x, r:x }))] }
     ]
   })}
 
@@ -91,7 +101,9 @@ const esteMes = (d) => d && new Date(d).getMonth() === new Date().getMonth();
 let _busca = '';
 
 export function acao(nome, valor, redesenhar) {
-  if (nome === 'crm:filtrar-contatos') { _busca = valor || ''; redesenhar(); return true; }
+  if (nome === 'crm:filtrar-contatos')   { _busca = valor || ''; redesenhar(); return true; }
+  if (nome === 'crm:filtro-empresa')     { _fEmpresa = valor || ''; redesenhar(); return true; }
+  if (nome === 'crm:filtro-orig-contato'){ _fOrigem = valor || '';  redesenhar(); return true; }
   if (nome === 'ordenar') { _ordem = { campo: valor, desc: !(_ordem.campo === valor && _ordem.desc) }; redesenhar(); return true; }
   return false;
 }

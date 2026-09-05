@@ -102,8 +102,14 @@ export function filtros({ busca, selects = [], direita = '' }) {
   return `<div class="ds-filtros">
     ${busca ? `<div class="ds-busca">${icone('search','sm')}
       <input type="search" id="${esc(busca.id)}" placeholder="${esc(busca.placeholder || 'Buscar')}" data-acao="${esc(busca.acao || '')}"></div>` : ''}
-    ${selects.map(s => `<select class="ds-select" id="${esc(s.id)}" data-acao="${esc(s.acao || '')}">
-      ${s.opcoes.map(o => `<option value="${esc(o.v ?? o)}">${esc(o.r ?? o)}</option>`).join('')}</select>`).join('')}
+    ${selects.map(s => `<select class="ds-select" id="${esc(s.id)}" ${s.acao ? `data-acao="${esc(s.acao)}"` : ''}>
+      ${s.opcoes.map(o => {
+        const v = o.v ?? o, r = o.r ?? o;
+        /* `valor` reaplica a escolha depois do redesenho: a tela inteira e
+           refeita a cada acao, e sem isto o filtro voltava para "Todos"
+           sozinho — parecia que nao tinha filtrado. */
+        return `<option value="${esc(v)}" ${s.valor != null && String(s.valor) === String(v) ? 'selected' : ''}>${esc(r)}</option>`;
+      }).join('')}</select>`).join('')}
     ${direita ? `<div class="direita">${direita}</div>` : ''}
   </div>`;
 }
