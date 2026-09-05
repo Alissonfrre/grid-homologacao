@@ -22047,32 +22047,28 @@ window.addEventListener('popstate', async (e) => {
       return;
     }
   }
-  if (TITULOS[pagina] && _perfilTemAcesso(pagina) && pagina !== paginaAtual) {
-    paginaAtual = pagina;
-    marcarNavAtivo(pagina);
-    document.getElementById('headerTitle').textContent = TITULOS[pagina] || pagina;
-    showLoading();
-    try {
-      switch(pagina) {
-        case 'home':          await renderHome(); break;
-        case 'orgs':          await renderOrgs(); break;
-        case 'financeiro':    await renderFinanceiroProvedor(); break;
-        case 'adocao':        await renderAdocaoProvedor(); break;
-        case 'logs':          await renderLogsAuditoria(); break;
-        case 'clientes':      await renderClientes(); break;
-        case 'colaboradores': await renderColaboradores(); break;
-        case 'catalogo':      await renderCatalogo(); break;
-        case 'conformidade':  await renderConformidade(); break;
-        case 'turmas':        await renderTurmas(); break;
-        case 'equipe':        await renderEquipe(); break;
-        case 'agenda':        await renderAgenda(); break;
-        case 'historico':     await renderHistorico(); break;
-        case 'relatorios':    await renderRelatorios(); break;
-        case 'conta':         await renderConta(); break;
-        default: renderEmBreve(TITULOS[pagina]||pagina);
-      }
-    } catch(err) { console.error(err); renderErro(traduzErroSupabase(err)); }
-    finally { hideLoading(); }
+  // ── BUG CORRIGIDO EM 05/09 (h19) ──────────────────────────────────────────
+  // Este listener tinha uma COPIA do switch de irPara(), com 15 telas e sem o
+  // ramo de modulo. Consequencia: Voltar/Avancar do navegador, e abrir o app
+  // direto num link com hash de modulo (app.html#crm-funil), mostravam
+  // "Esta secao esta sendo construida" — a rota existe, mas este roteador nao
+  // a conhecia. O h18 corrigiu irPara() e nao este, porque eu nao sabia que
+  // havia dois.
+  //
+  // Agora ele delega. irPara() ja trata titulo, menu ativo, loading, erro e o
+  // ramo de modulo — inclusive esperar a plataforma terminar de carregar. E o
+  // pushState de la nao dispara aqui, porque num popstate o hash JA e o da
+  // pagina de destino (a condicao `location.hash !== novoHash` e falsa).
+  //
+  // Lição deste ciclo: a lei 7 do projeto ("duplicar expressao entre telas e o
+  // defeito recorrente") tambem vale para roteador. Duas copias do switch
+  // significavam que toda rota nova precisava ser lembrada em dois lugares.
+  // TITULOS recebe os itens VISIVEIS de menu dos modulos (_injetarMenuDosModulos),
+  // mas nao as rotas ocultas — a ficha do lead e a configuracao do funil. Sem a
+  // segunda condicao, "Voltar" para a ficha de um lead nao redesenhava nada.
+  const ehRotaDeModulo = !!(_GRID && _GRID.navegacao && _GRID.navegacao.rota(pagina));
+  if ((TITULOS[pagina] || ehRotaDeModulo) && _perfilTemAcesso(pagina) && pagina !== paginaAtual) {
+    await irPara(pagina);
   }
 });
 
@@ -27201,7 +27197,7 @@ async function exportarRelatorioComparativoPDF() {
   // cache do navegador. Agora o nome do cache deriva de APP_BUILD, que
   // muda a cada publicação, e o activate do sw.js apaga os caches
   // anteriores sozinho.
-  var APP_BUILD = 'h18';
+  var APP_BUILD = 'h19';
   window.APP_BUILD = APP_BUILD;
 
   function _mostrarBannerAtualizacao(){

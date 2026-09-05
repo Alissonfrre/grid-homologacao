@@ -407,7 +407,9 @@ export async function arquivarEtapa(id) {
 
   const { count } = await _sb.from('crm_leads')
     .select('id', { count: 'exact', head: true }).eq('etapa_id', id).is('excluido_em', null);
-  if (count) throw new Error(`Esta etapa tem ${count} lead${count > 1 ? 's' : ''}. Mova ${count > 1 ? 'eles' : 'ele'} antes de remover a etapa.`);
+  if (count) throw new Error(count > 1
+    ? `Esta etapa tem ${count} leads. Mova esses leads para outra etapa antes de removê-la.`
+    : 'Esta etapa tem 1 lead. Mova esse lead para outra etapa antes de removê-la.');
   const { error } = await _sb.from('crm_funil_etapas')
     .update({ arquivado_em: new Date().toISOString() }).eq('id', id);
   if (error) throw error;
