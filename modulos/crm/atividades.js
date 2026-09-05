@@ -74,7 +74,7 @@ export async function render() {
     ]
   })}
 
-  ${visao === 'quadro' ? quadro(g) : listaCompleta(g)}
+  ${visao === 'quadro' ? quadro(g, sessao.usuario()?.nome || null) : listaCompleta(g)}
   ${dados.ehExemplo() ? avisoDemo() : ''}`;
 }
 
@@ -109,7 +109,7 @@ const COLUNAS = [
   { id:'feitas',    rotulo:'Concluídas',    cor:'#059669', vazio:'Nenhuma concluída' }
 ];
 
-function quadro(g) {
+function quadro(g, eu) {
   return `<div class="crm-kanban-wrap"><div class="crm-kanban" style="grid-template-columns:repeat(4,minmax(232px,1fr));min-width:960px">
     ${COLUNAS.map(c => {
       const itens = g[c.id];
@@ -118,7 +118,7 @@ function quadro(g) {
           <i class="crm-kb-ponto" style="background:${c.cor}"></i>
           <span class="nome">${c.rotulo}</span><span class="tot">${itens.length}</span></div>
         <div class="crm-kb-body" data-solta-ativ="${c.id}">
-          ${itens.map(cartao).join('') || `<div class="crm-kb-vazio">${c.vazio}</div>`}
+          ${itens.map(a => cartao(a, eu)).join('') || `<div class="crm-kb-vazio">${c.vazio}</div>`}
         </div></div>`;
     }).join('')}
   </div></div>`;
@@ -129,17 +129,25 @@ const fundo = (hex) => {
   return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},.08)`;
 };
 
-const cartao = (a) => `
-  <div class="crm-ativ-card ${a.concluida ? 'feita' : ''}" draggable="true" data-ativ="${ui.esc(a.id)}">
+/* O cartao responde a duas perguntas que a versao anterior nao respondia:
+   de que negocio se trata, e quem pediu. Uma atividade que o administrador
+   abriu para o vendedor chegava sem remetente. */
+const cartao = (a, eu) => `
+  <div class="crm-ativ-card ${a.concluida ? 'feita' : ''}" draggable="true"
+       data-ativ="${ui.esc(a.id)}" data-acao="crm:atividade:${ui.esc(a.id)}">
     <div class="crm-ativ-card-top">
       <span class="crm-ativ-ico">${icone(a.concluida ? 'check' : (ICONE_TIPO[a.tipo] || 'activity'), 'sm')}</span>
       <span class="crm-ativ-card-t">${ui.esc(a.titulo)}</span>
     </div>
+    ${a.alvo_nome ? `<div class="crm-ativ-card-alvo">${icone('funnel','sm')} ${ui.esc(a.alvo_nome)}</div>` : ''}
     ${a.sub ? `<div class="crm-ativ-card-s">${ui.esc(a.sub)}</div>` : ''}
     <div class="crm-ativ-card-rod">
-      <span>${ui.esc(a.responsavel || 'sem responsável')}</span>
+      <span class="crm-ativ-quem ${!a.responsavel ? 'sem' : (eu && a.responsavel === eu ? 'meu' : '')}">
+        ${icone('user','sm')} ${ui.esc(a.responsavel || 'sem responsável')}</span>
       <span class="q">${a.quando ? ui.fmt.data(a.quando) + ' ' + ui.fmt.hora(a.quando) : 'sem data'}</span>
     </div>
+    ${a.autor && a.autor !== a.responsavel
+      ? `<div class="crm-ativ-card-autor">pedida por ${ui.esc(a.autor)}</div>` : ''}
   </div>`;
 
 /* ── Lista ─────────────────────────────────────────────────────────────── */
@@ -162,16 +170,16 @@ function listaCompleta(g) {
 function linha(a, atrasada) {
   const ic = ICONE_TIPO[a.tipo] || 'activity';
   const dias = Math.floor((inicioDeHoje() - new Date(a.quando)) / 86400000);
-  return `<div class="crm-ativ">
+  return `<div class="crm-ativ clicavel" data-acao="crm:atividade:${ui.esc(a.id)}">
     <span class="crm-ativ-ico" style="${a.concluida ? 'background:var(--green-l);color:var(--green-text)' : atrasada ? 'background:var(--atencao-l);color:var(--atencao-text)' : ''}">
       ${icone(a.concluida ? 'check' : ic, 'sm')}</span>
     <div style="flex:1">
       <div class="crm-ativ-t" ${a.concluida ? 'style="color:var(--text-3)"' : ''}>${ui.esc(a.titulo)}</div>
-      <div class="crm-ativ-s">${ui.esc(a.sub || TIPOS[a.tipo] || '')}${a.responsavel ? ' · ' + ui.esc(a.responsavel) : ' · sem responsável'}</div>
+      <div class="crm-ativ-s">${ui.esc(TIPOS[a.tipo] || '')}${a.alvo_nome ? ' · ' + ui.esc(a.alvo_nome) : ''}${a.responsavel ? ' · ' + ui.esc(a.responsavel) : ' · sem responsável'}${a.autor && a.autor !== a.responsavel ? ' · pedida por ' + ui.esc(a.autor) : ''}</div>
     </div>
     ${atrasada ? ui.selo(dias <= 1 ? '1 dia' : `${dias} dias`, 'atencao')
                : `<span class="crm-ativ-hora" ${a.concluida ? 'style="color:var(--text-3)"' : ''}>${ui.fmt.hora(a.quando)}</span>`}
-    <button class="ds-icobtn" data-acao="crm:concluir:${a.id}" title="${a.concluida ? 'Reabrir' : 'Concluir'}">${icone(a.concluida ? 'clock' : 'check','sm')}</button>
+    <button class="ds-icobtn crm-para-clique" data-acao="crm:concluir:${a.id}" title="${a.concluida ? 'Reabrir' : 'Concluir'}">${icone(a.concluida ? 'clock' : 'check','sm')}</button>
   </div>`;
 }
 

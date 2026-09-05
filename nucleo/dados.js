@@ -148,22 +148,42 @@ export async function listar(colecao, { filtro = {}, ordem = null } = {}) {
       return (data || []).map(_mapContato);
     }
     if (colecao === 'crm_atividades') {
+      /* `criado_por` entra no select porque a tela precisa dizer QUEM pediu a
+         atividade: sem isso, uma tarefa que o administrador criou para outra
+         pessoa chega sem remetente, e quem recebe nao sabe de onde veio. */
       const { data, error } = await _sb.from('crm_atividades')
-        .select('*, responsavel:usuarios!crm_atividades_responsavel_id_fkey(nome)')
+        .select('*, responsavel:usuarios!crm_atividades_responsavel_id_fkey(nome), autor:usuarios!crm_atividades_criado_por_fkey(nome)')
         .eq('org_id', sessao.orgId()).is('excluido_em', null).order('vencimento');
       if (error) throw error;
+
+      /* O alvo e generico (alvo_tipo/alvo_id), entao nao ha FK para o
+         PostgREST seguir. Uma consulta so para todos os leads referenciados —
+         o alternativo seria uma consulta por atividade. */
+      const idsLead = [...new Set((data || []).filter(a => a.alvo_tipo === 'lead' && a.alvo_id).map(a => a.alvo_id))];
+      let leads = {};
+      if (idsLead.length) {
+        const { data: ls } = await _sb.from('crm_leads')
+          .select('id, empresa, titulo, catalogo:catalogo!crm_leads_catalogo_id_fkey(nome), treinamento_livre')
+          .in('id', idsLead);
+        for (const l of ls || []) leads[l.id] = l;
+      }
       // A tela do lead filtra por `lead_id`; o banco guarda alvo_tipo/alvo_id,
       // que e generico de proposito (uma atividade pode apontar para cliente ou
       // contato amanha). A ponte entre as duas formas fica aqui.
-      return (data || []).map(a => ({
-        ...a,
-        titulo: a.assunto,
-        sub: a.descricao,
-        quando: a.vencimento,
-        responsavel: a.responsavel?.nome || null,
-        lead_id: a.alvo_tipo === 'lead' ? a.alvo_id : null,
-        concluida: !!a.concluida_em
-      }));
+      return (data || []).map(a => {
+        const l = a.alvo_tipo === 'lead' ? leads[a.alvo_id] : null;
+        return {
+          ...a,
+          titulo: a.assunto,
+          sub: a.descricao,
+          quando: a.vencimento,
+          responsavel: a.responsavel?.nome || null,
+          autor: a.autor?.nome || null,
+          lead_id: a.alvo_tipo === 'lead' ? a.alvo_id : null,
+          alvo_nome: l ? `${l.empresa}${(l.titulo || l.catalogo?.nome || l.treinamento_livre) ? ' — ' + (l.titulo || l.catalogo?.nome || l.treinamento_livre) : ''}` : null,
+          concluida: !!a.concluida_em
+        };
+      });
     }
   }
   if (_origem === 'exemplo' || SO_EXEMPLO.includes(colecao)) {
@@ -497,6 +517,10 @@ export async function salvarAtividade(form) {
     alvo_id: form.alvo_id || null
   };
   if (!linha.assunto) throw new Error('Informe o assunto.');
+  /* Quem criou fica gravado na criacao e nunca e reescrito na edicao: a
+     atividade que o administrador abriu para o vendedor continua mostrando
+     quem pediu, mesmo depois de o vendedor editar o horario. */
+  if (!form.id) linha.criado_por = sessao.usuario()?.id || null;
   const q = form.id
     ? _sb.from('crm_atividades').update(linha).eq('id', form.id).select('id').single()
     : _sb.from('crm_atividades').insert(linha).select('id').single();
@@ -508,6 +532,27 @@ export async function salvarAtividade(form) {
 /* Arrastar uma atividade entre as colunas do quadro. As colunas sao estados de
    tempo, entao o que muda e a data de vencimento — menos "hoje", que tambem
    reabre uma atividade ja concluida (arrastar de volta desfaz). */
+export async function obterAtividade(id) {
+  if (_origem !== 'banco') return (_exemplo['crm_atividades'] || []).find(a => a.id === id) || null;
+  const { data, error } = await _sb.from('crm_atividades')
+    .select('*, responsavel:usuarios!crm_atividades_responsavel_id_fkey(nome), autor:usuarios!crm_atividades_criado_por_fkey(nome)')
+    .eq('org_id', sessao.orgId()).eq('id', id).maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  return { ...data, titulo: data.assunto, sub: data.descricao, quando: data.vencimento,
+           responsavel: data.responsavel?.nome || null, autor: data.autor?.nome || null,
+           concluida: !!data.concluida_em };
+}
+
+/* Exclusao reversivel, como a de lead: sai da lista, continua no banco. */
+export async function excluirAtividade(id) {
+  if (_origem !== 'banco') return _simulado();
+  const { error } = await _sb.from('crm_atividades')
+    .update({ excluido_em: new Date().toISOString() }).eq('id', id);
+  if (error) throw error;
+  return true;
+}
+
 export async function reagendarAtividade(id, destino) {
   if (_origem !== 'banco') return _simulado();
 

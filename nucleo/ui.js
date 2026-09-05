@@ -111,7 +111,7 @@ export function filtros({ busca, selects = [], direita = '' }) {
 /* ── Tabela de dados ────────────────────────────────────────────────────────
    O componente que o produto não tinha: cabeçalho ordenável, seleção em
    lote, dígitos alinhados. Colunas: {campo, rotulo, dir, largura, render}. */
-export function tabela({ colunas, linhas, ordem, selecao = [], selecionavel = false, rodape = '', vazio: vz }) {
+export function tabela({ colunas, linhas, ordem, selecao = [], selecionavel = false, rodape = '', vazio: vz, acaoLinha }) {
   if (!linhas.length) return vazio(vz || { titulo: 'Nada por aqui ainda' });
   const cab = `<tr>
     ${selecionavel ? `<th class="chk"><span class="ds-chk ${selecao.length && selecao.length === linhas.length ? 'on' : ''}" data-acao="sel-todos"></span></th>` : ''}
@@ -124,7 +124,12 @@ export function tabela({ colunas, linhas, ordem, selecao = [], selecionavel = fa
 
   const corpo = linhas.map((l, i) => {
     const sel = selecao.includes(l.id);
-    return `<tr class="${sel ? 'sel' : ''}" data-id="${esc(l.id)}">
+    /* Linha clicavel. Ate 05/09 a tabela nao tinha isto: no computador, a tela
+       de Contatos (que e tabela) nao abria contato nenhum, enquanto a versao de
+       celular (que e lista) abria. O clique no checkbox de selecao nao conta —
+       por isso a acao fica na <tr> e a celula do checkbox para a propagacao. */
+    const acao = acaoLinha ? acaoLinha(l) : null;
+    return `<tr class="${sel ? 'sel' : ''} ${acao ? 'clicavel' : ''}" data-id="${esc(l.id)}" ${acao ? `data-acao="${esc(acao)}"` : ''}>
       ${selecionavel ? `<td class="chk"><span class="ds-chk ${sel ? 'on' : ''}" data-acao="sel:${esc(l.id)}"></span></td>` : ''}
       ${colunas.map(c => `<td class="${c.dir ? 'dir' : ''}">${c.render ? c.render(l, i) : esc(l[c.campo])}</td>`).join('')}
     </tr>`;

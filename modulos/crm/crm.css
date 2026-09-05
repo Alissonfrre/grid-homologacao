@@ -210,3 +210,27 @@
 .crm-ativ-card-rod .q{font-weight:700;font-variant-numeric:tabular-nums}
 
 @media(max-width:767px){.crm-funis-trilho{overflow-x:auto;flex-wrap:nowrap}}
+
+
+/* ── 05/09 (h21) — cartão de atividade completo e linhas clicáveis ────────
+   O cartão passou a responder "de que negócio se trata" e "quem pediu": uma
+   atividade criada por outra pessoa chegava sem remetente. */
+.crm-ativ-card-alvo{display:flex;align-items:center;gap:6px;margin:6px 0 0 30px;
+  font-size:var(--fs-1);font-weight:600;color:var(--text-2);background:var(--gray-50);
+  border-radius:var(--r-sm);padding:3px 7px;width:fit-content;max-width:100%;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.crm-ativ-card-autor{margin:6px 0 0 30px;font-size:var(--fs-1);color:var(--text-3);font-style:italic}
+.crm-ativ-quem{display:inline-flex;align-items:center;gap:4px;min-width:0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.crm-ativ-quem.sem{color:var(--atencao-text)}
+.crm-ativ-quem.meu{color:var(--navy);font-weight:700}
+
+/* Linha de atividade clicável — o alvo de toque é a linha inteira, e o botão
+   de concluir continua sendo dele mesmo (o despachante usa o data-acao mais
+   próximo do clique). */
+.crm-ativ.clicavel{cursor:pointer}
+.crm-ativ.clicavel:hover{background:var(--gray-50)}
+
+/* Linha de tabela clicável (Contatos, Leads) */
+.ds-tabela tr.clicavel{cursor:pointer}
+.ds-tabela tr.clicavel:hover{background:var(--gray-50)}

@@ -56,6 +56,7 @@ function tabela(contatos) {
 
   return ui.tabela({
     selecionavel:false, ordem:_ordem,
+    acaoLinha: (c) => `crm:contato:${c.id}`,
     colunas:[
       { campo:'nome', rotulo:'Contato',
         render:(c) => `<div class="prim">${ui.esc(c.nome)}</div><div class="sub">${ui.esc(c.cargo || '—')}</div>` },
@@ -63,7 +64,9 @@ function tabela(contatos) {
         render:(c) => c.empresa ? ui.esc(c.empresa) : `<span style="color:var(--text-3)">Sem empresa vinculada</span>` },
       { campo:'telefone', rotulo:'Telefone', render:(c) => `<span class="num">${ui.fmt.telefone(c.telefone)}</span>` },
       { campo:'situacao', rotulo:'Situação', ordenavel:false, render:(c) => ui.selo(...situacao(c.situacao)) },
-      { campo:'ultimo', rotulo:'Último contato', dir:true, render:(c) => ui.fmt.desde(c.ultimo) }
+      { campo:'ultimo', rotulo:'Último contato', dir:true, render:(c) => ui.fmt.desde(c.ultimo) },
+      { campo:'acoes', rotulo:'', ordenavel:false, dir:true,
+        render:(c) => `<button class="ds-icobtn" title="Editar contato" data-acao="crm:contato:${c.id}">${icone('tool','sm')}</button>` }
     ],
     linhas,
     rodape: ui.paginacao({ total: linhas.length, rotulo:'contatos' })

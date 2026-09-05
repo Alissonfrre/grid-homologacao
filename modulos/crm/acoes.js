@@ -8,6 +8,7 @@
    ══════════════════════════════════════════════════════════════════════════ */
 
 import * as dados from '../../nucleo/dados.js';
+import * as sessao from '../../nucleo/sessao.js';
 import { ESTAGIOS } from '../../nucleo/estagios.js';
 
 const esc = (v) => String(v ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -85,27 +86,81 @@ async function formLead(ponte, redesenhar, lead = null) {
   }), redesenhar, lead ? 'Lead atualizado.' : 'Lead criado.'));
 }
 
-async function formAtividade(ponte, redesenhar, alvoLead = null) {
-  const resps = await dados.responsaveis();
-  ponte.abrirModal('Nova atividade', `
-    ${linha('Assunto *', `<input id="crmA_assunto" style="${CAMPO}" placeholder="Ligar para o cliente, enviar proposta...">`)}
+/* Uma atividade e um combinado entre duas pessoas: quem pede e quem faz. O
+   formulario mostra os dois lados — e por isso serve tanto para "me lembrar de
+   ligar" quanto para "peca ao Diego que ligue". */
+const TIPOS_ATIVIDADE = [['tarefa','Tarefa'],['ligacao','Ligação'],['email','E-mail'],
+  ['reuniao','Reunião'],['visita','Visita'],['proposta','Proposta'],['whatsapp','WhatsApp']];
+
+/* datetime-local nao aceita ISO com fuso: precisa de "AAAA-MM-DDTHH:MM" na hora
+   local. Sem esta conversao, editar uma atividade abria o campo de data vazio e
+   salvar apagava o vencimento — perder o horario de um compromisso e pior do
+   que nao poder edita-lo. */
+function paraCampoLocal(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+async function formAtividade(ponte, redesenhar, alvoLead = null, ativ = null) {
+  const [resps, leads] = await Promise.all([
+    dados.responsaveis(),
+    dados.listar('crm_leads').catch(() => [])
+  ]);
+  const eu = sessao.usuario() || null;
+  const editando = !!ativ;
+  const alvoAtual = ativ?.alvo_tipo === 'lead' ? ativ.alvo_id : (alvoLead || null);
+
+  const opcResp = (sel) => `<option value="">Sem responsável</option>` +
+    resps.map(r => `<option value="${esc(r.id)}" ${String(r.id) === String(sel) ? 'selected' : ''}>${esc(r.nome)}${eu && r.id === eu.id ? ' (você)' : ''}</option>`).join('');
+
+  const opcLead = (sel) => `<option value="">Nenhum — atividade avulsa</option>` +
+    leads.slice(0, 200).map(l => `<option value="${esc(l.id)}" ${String(l.id) === String(sel) ? 'selected' : ''}>${esc(l.empresa)}${(l.item || l.treinamento) ? ' — ' + esc(l.item || l.treinamento) : ''}</option>`).join('');
+
+  const rodapeInfo = editando ? `
+    <div style="margin-top:4px;padding-top:12px;border-top:1px solid var(--border);
+                font-size:12px;color:var(--text-3);line-height:1.7">
+      ${ativ.autor ? `Criada por <b style="color:var(--text-2)">${esc(ativ.autor)}</b>` : 'Criada'}
+      ${ativ.criado_em ? ' em ' + new Date(ativ.criado_em).toLocaleDateString('pt-BR') : ''}
+      ${ativ.concluida ? ` · <b style="color:var(--green-text)">concluída em ${new Date(ativ.concluida_em).toLocaleDateString('pt-BR')}</b>` : ''}
+    </div>` : '';
+
+  ponte.abrirModal(editando ? 'Atividade' : 'Nova atividade', `
+    ${linha('Assunto *', `<input id="crmA_assunto" style="${CAMPO}" value="${esc(ativ?.assunto || '')}" placeholder="Ligar para o cliente, enviar proposta...">`)}
     ${duas(
       linha('Tipo', `<select id="crmA_tipo" style="${CAMPO}">${
-        [['tarefa','Tarefa'],['ligacao','Ligação'],['email','E-mail'],['reuniao','Reunião'],['proposta','Proposta'],['whatsapp','WhatsApp']]
-        .map(([v,r]) => `<option value="${v}">${r}</option>`).join('')}</select>`),
-      linha('Vence em', `<input id="crmA_venc" type="datetime-local" style="${CAMPO}">`)
+        TIPOS_ATIVIDADE.map(([v,r]) => `<option value="${v}" ${v === (ativ?.tipo || 'tarefa') ? 'selected' : ''}>${r}</option>`).join('')}</select>`),
+      linha('Vence em', `<input id="crmA_venc" type="datetime-local" style="${CAMPO}" value="${paraCampoLocal(ativ?.vencimento)}">`)
     )}
-    ${linha('Responsável', `<select id="crmA_resp" style="${CAMPO}"><option value="">Sem responsável</option>${
-      resps.map(r => `<option value="${esc(r.id)}">${esc(r.nome)}</option>`).join('')}</select>`)}
-    ${linha('Descrição', `<textarea id="crmA_desc" rows="3" style="${CAMPO}"></textarea>`)}
-  `, ponte.botoes('Salvar atividade', 'crmSalvarAtividade'));
+    ${linha('Responsável — quem vai fazer', `<select id="crmA_resp" style="${CAMPO}">${opcResp(ativ?.responsavel_id)}</select>`)}
+    ${linha('Negócio relacionado', `<select id="crmA_lead" style="${CAMPO}">${opcLead(alvoAtual)}</select>`)}
+    ${linha('Descrição', `<textarea id="crmA_desc" rows="3" style="${CAMPO}" placeholder="O que precisa ser feito, o que já foi combinado...">${esc(ativ?.descricao || '')}</textarea>`)}
+    ${rodapeInfo}
+  `, editando
+      ? `<button class="btn btn-outline" id="crmExcluirAtividade" style="margin-right:auto;color:var(--red-text)">Excluir</button>
+         <button class="btn btn-outline" id="crmConcluirAtividade">${ativ.concluida ? 'Reabrir' : 'Concluir'}</button>
+         <button class="btn btn-navy" id="crmSalvarAtividade">Salvar</button>`
+      : ponte.botoes('Salvar atividade', 'crmSalvarAtividade'));
 
   ponte.aoConfirmar('crmSalvarAtividade', () => gravar(ponte, () => dados.salvarAtividade({
+    id: ativ?.id,
     assunto: val('crmA_assunto'), tipo: val('crmA_tipo'),
     vencimento: val('crmA_venc') || null, responsavel_id: val('crmA_resp') || null,
     descricao: val('crmA_desc') || null,
-    alvo_tipo: alvoLead ? 'lead' : null, alvo_id: alvoLead || null
-  }), redesenhar, 'Atividade criada.'));
+    alvo_tipo: val('crmA_lead') ? 'lead' : null, alvo_id: val('crmA_lead') || null
+  }), redesenhar, editando ? 'Atividade atualizada.' : 'Atividade criada.'));
+
+  if (editando) {
+    ponte.aoConfirmar('crmConcluirAtividade', () => gravar(ponte,
+      () => dados.concluirAtividade(ativ.id, !ativ.concluida), redesenhar,
+      ativ.concluida ? 'Atividade reaberta.' : 'Atividade concluída.'));
+    ponte.aoConfirmar('crmExcluirAtividade', async () => {
+      const ok = await ponte.confirmar?.('Excluir esta atividade? Ela sai da lista e continua no histórico.');
+      if (ok) await gravar(ponte, () => dados.excluirAtividade(ativ.id), redesenhar, 'Atividade excluída.');
+    });
+  }
 }
 
 async function formContato(ponte, redesenhar, contato = null) {
@@ -222,6 +277,7 @@ export default async function acoes(acao, { redesenhar }) {
 
   if (acao === 'crm:novo-lead')     { await formLead(ponte, redesenhar); return true; }
   if (acao === 'crm:nova-atividade'){ await formAtividade(ponte, redesenhar); return true; }
+  if (acao.startsWith('crm:nova-atividade:')) { await formAtividade(ponte, redesenhar, resto.replace('nova-atividade:', '')); return true; }
   if (acao === 'crm:novo-contato')  { await formContato(ponte, redesenhar); return true; }
 
   if (acao.startsWith('crm:editar-lead:')) {
@@ -297,6 +353,15 @@ export default async function acoes(acao, { redesenhar }) {
     const c = await dados.obter('crm_contatos', resto.replace('contato:', ''));
     if (c) await formContato(ponte, redesenhar, c);
     else ponte.avisar?.('Contato não encontrado.', 'error');
+    return true;
+  }
+
+  /* Clique no cartao/linha de uma atividade. Ate 05/09 nao existia: dava para
+     criar e concluir, nunca abrir. */
+  if (acao.startsWith('crm:atividade:')) {
+    const a = await dados.obterAtividade(resto.replace('atividade:', ''));
+    if (a) await formAtividade(ponte, redesenhar, null, a);
+    else ponte.avisar?.('Atividade não encontrada.', 'error');
     return true;
   }
 
