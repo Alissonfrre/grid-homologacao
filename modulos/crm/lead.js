@@ -57,8 +57,14 @@ export async function render(params = {}) {
     </div>
 
     <div style="display:flex;flex-direction:column;gap:12px">
-      ${ui.cartao(`<div class="ds-card-titulo" style="margin-bottom:12px">Dados do lead</div>
-        ${dado('Empresa', lead.empresa)}
+      ${ui.cartao(`<div class="ds-card-titulo" style="margin-bottom:12px">Dados do negócio</div>
+        ${lead.cliente_id
+          ? `<div class="crm-ctx-linha"><span class="k">Empresa</span>
+               <span class="v"><span class="crm-link" data-acao="ir:crm-empresa:${ui.esc(lead.cliente_id)}">${ui.esc(lead.empresa)} ${icone('chevronright','sm')}</span></span></div>`
+          : dado('Empresa', lead.empresa)}
+        ${lead.previsao ? dado('Previsão de fechamento', new Date(lead.previsao + 'T12:00').toLocaleDateString('pt-BR')) : ''}
+        ${lead.motivo_perda ? dado('Motivo da perda', lead.motivo_perda) : ''}
+        ${lead.motivo_perda_obs ? dado('Detalhe da perda', lead.motivo_perda_obs) : ''}
         ${dado('Contato', contato?.nome || '—')}
         ${dado('Cargo', contato?.cargo || '—')}
         ${dado('Telefone', ui.fmt.telefone(contato?.telefone))}
@@ -113,12 +119,15 @@ function linhaTempo(historico, lead) {
 
   return historico.map(h => {
     const e = EVENTO[h.acao] || { ic:'activity', cor:'var(--gray-100)', t: h.acao };
-    const campo = ROTULO_CAMPO[h.campo] || h.campo;
+    /* Evento de criacao nao tem campo — e o rotulo saia como o texto "null:"
+       na frente do nome da empresa. Sem campo, mostra so o valor. */
+    const campo = h.campo ? (ROTULO_CAMPO[h.campo] || h.campo) : null;
     /* "de X para Y" so quando os dois lados existem: metade da frase e pior
        que nenhuma. Valor vem como texto do banco e volta a ser dinheiro aqui. */
     const fmtLado = (v) => h.campo === 'valor' && v != null && v !== '' ? ui.fmt.moeda(v) : v;
-    const detalhe = (h.de && h.para) ? `${campo}: ${fmtLado(h.de)} → ${fmtLado(h.para)}`
-                  : (h.para ? `${campo}: ${fmtLado(h.para)}` : (campo || ''));
+    const comCampo = (txt) => campo ? `${campo}: ${txt}` : txt;
+    const detalhe = (h.de && h.para) ? comCampo(`${fmtLado(h.de)} → ${fmtLado(h.para)}`)
+                  : (h.para ? comCampo(String(fmtLado(h.para))) : (campo || ''));
     return `<div class="crm-ativ">
       <span class="crm-ativ-ico" style="background:${e.cor}">${icone(e.ic,'sm')}</span>
       <div style="flex:1">

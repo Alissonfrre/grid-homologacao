@@ -73,7 +73,10 @@ async function formLead(ponte, redesenhar, lead = null) {
       linha('Quantidade', `<input id="crmF_vagas" type="number" min="1" style="${CAMPO}" value="${esc(lead?.vagas ?? '')}" placeholder="participantes, itens...">`),
       linha('Valor (R$)', `<input id="crmF_valor" type="number" min="0" step="0.01" style="${CAMPO}" value="${esc(lead?.valor ?? '')}">`)
     )}
-    ${linha('Origem', `<input id="crmF_origem" style="${CAMPO}" value="${esc(lead?.origem || '')}" placeholder="WhatsApp, Indicação, Site...">`)}
+    ${duas(
+      linha('Origem', `<input id="crmF_origem" style="${CAMPO}" value="${esc(lead?.origem || '')}" placeholder="WhatsApp, Indicação, Site...">`),
+      linha('Previsão de fechamento', `<input id="crmF_previsao" type="date" style="${CAMPO}" value="${esc(lead?.previsao || '')}">`)
+    )}
     ${linha('Observações', `<textarea id="crmF_obs" rows="3" style="${CAMPO}">${esc(lead?.observacoes || '')}</textarea>`)}
   `, ponte.botoes('Salvar lead', 'crmSalvarLead'));
 
@@ -82,7 +85,8 @@ async function formLead(ponte, redesenhar, lead = null) {
     titulo: val('crmF_titulo'),
     responsavel_id: val('crmF_resp') || null, catalogo_id: val('crmF_curso') || null,
     treinamento_livre: val('crmF_livre') || null, vagas: val('crmF_vagas'),
-    valor: val('crmF_valor'), origem: val('crmF_origem'), observacoes: val('crmF_obs')
+    valor: val('crmF_valor'), origem: val('crmF_origem'), observacoes: val('crmF_obs'),
+    previsao: val('crmF_previsao') || null
   }), redesenhar, lead ? 'Lead atualizado.' : 'Lead criado.'));
 }
 
@@ -313,14 +317,38 @@ export default async function acoes(acao, { redesenhar }) {
     return true;
   }
 
-  if (acao.startsWith('crm:ganho:') || acao.startsWith('crm:perdido:')) {
-    const ganhou = acao.startsWith('crm:ganho:');
+  if (acao.startsWith('crm:ganho:')) {
     const id = resto.split(':')[1];
-    const ok = await ponte.confirmar?.(ganhou
-      ? 'Marcar este lead como ganho?'
-      : 'Marcar este lead como perdido? Ele continua no histórico.');
-    if (ok) await gravar(ponte, () => dados.moverLead(id, ganhou ? 'ganho' : 'perdido'),
-                         redesenhar, ganhou ? 'Lead ganho.' : 'Lead marcado como perdido.');
+    const ok = await ponte.confirmar?.('Marcar este negócio como ganho?');
+    if (ok) await gravar(ponte, () => dados.moverLead(id, 'ganho'), redesenhar, 'Negócio ganho.');
+    return true;
+  }
+
+  /* Perder pede o MOTIVO na hora. Perguntar depois nao funciona: ninguem volta
+     para preencher, e uma taxa de perda sem motivo nao ensina nada. */
+  if (acao.startsWith('crm:perdido:')) {
+    const id = resto.split(':')[1];
+    const motivos = await dados.motivosPerda().catch(() => []);
+    if (!motivos.length) {
+      const ok = await ponte.confirmar?.('Marcar como perdido? Ele continua no histórico.');
+      if (ok) await gravar(ponte, () => dados.moverLead(id, 'perdido'), redesenhar, 'Negócio marcado como perdido.');
+      return true;
+    }
+    ponte.abrirModal('Marcar como perdido', `
+      ${linha('Motivo da perda *', `<select id="crmP_motivo" style="${CAMPO}">
+        <option value="">Escolha um motivo</option>
+        ${motivos.map(m => `<option value="${esc(m.id)}">${esc(m.nome)}</option>`).join('')}</select>`)}
+      ${linha('O que aconteceu (opcional)', `<textarea id="crmP_obs" rows="3" style="${CAMPO}" placeholder="Detalhe que ajude a próxima negociação parecida"></textarea>`)}
+      <div style="font-size:12px;color:var(--text-3);line-height:1.6">
+        O negócio sai do quadro e continua no histórico da empresa. O motivo alimenta o relatório
+        de perdas do painel.</div>
+    `, ponte.botoes('Marcar como perdido', 'crmSalvarPerda'));
+    ponte.aoConfirmar('crmSalvarPerda', () => {
+      if (!val('crmP_motivo')) { ponte.avisar?.('Escolha o motivo da perda.', 'error'); return; }
+      return gravar(ponte, () => dados.perderLead(id, {
+        motivo_id: val('crmP_motivo'), observacao: val('crmP_obs') || null
+      }), redesenhar, 'Negócio marcado como perdido.');
+    });
     return true;
   }
 

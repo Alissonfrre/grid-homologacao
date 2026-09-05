@@ -234,3 +234,13 @@
 /* Linha de tabela clicável (Contatos, Leads) */
 .ds-tabela tr.clicavel{cursor:pointer}
 .ds-tabela tr.clicavel:hover{background:var(--gray-50)}
+
+
+/* ── 05/09 (h24) — previsão de fechamento e ficha da empresa ─────────────── */
+.crm-lead-prev{display:flex;align-items:center;gap:5px;margin-top:8px;padding-top:8px;
+  border-top:1px dashed var(--border);font-size:var(--fs-1);font-weight:600;color:var(--text-3)}
+.crm-lead-prev.perto{color:var(--navy)}
+.crm-lead-prev.vencida{color:var(--atencao-text)}
+.crm-link{display:inline-flex;align-items:center;gap:3px;cursor:pointer;color:var(--navy);
+  font-weight:700;border-bottom:1px solid rgba(30,42,74,.25)}
+.crm-link:hover{border-bottom-color:var(--navy)}

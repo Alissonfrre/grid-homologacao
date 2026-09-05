@@ -93,12 +93,16 @@ const _mapLead = (l) => ({
   // Os dois nomes existem porque as telas usam os dois — e mais barato que
   // reabrir as telas aprovadas so para uniformizar nome de campo.
   parado_desde: l.etapa_desde,
+  previsao: l.previsao_fechamento || null,
+  motivo_perda: l.motivo?.nome || null,
+  motivo_perda_obs: l.motivo_perda_obs || null,
   anotacoes: l.observacoes,
   virou_cliente: !!l.cliente_id,
   criado_em: l.criado_em
 });
 
 const SEL_LEAD = `*,
+  motivo:crm_motivos_perda!crm_leads_motivo_perda_id_fkey(nome),
   etapa:crm_funil_etapas!crm_leads_etapa_id_fkey(slug,nome,tipo,ordem),
   responsavel:usuarios!crm_leads_responsavel_id_fkey(nome),
   contato:contatos!crm_leads_contato_id_fkey(nome),
@@ -495,14 +499,70 @@ export async function salvarLead(form) {
      amarrava o CRM a quem vende treinamento. Quem vende outra coisa escreve
      aqui; quem vende curso continua escolhendo do catalogo. */
   if (form.titulo != null) linha.titulo = String(form.titulo).trim() || null;
+  /* Previsao de fechamento: e o campo que transforma o funil em instrumento de
+     previsao. Sem ele, "R$ 340 mil em negociacao" nao diz QUANDO. */
+  if (form.previsao !== undefined) linha.previsao_fechamento = form.previsao || null;
   if (!linha.empresa) throw new Error('Informe a empresa.');
   const enviar = (l) => form.id
     ? _sb.from('crm_leads').update(l).eq('id', form.id).select('id').single()
     : _sb.from('crm_leads').insert(l).select('id').single();
   let { data, error } = await enviar(linha);
-  if (_semColuna(error)) { const { titulo, ...semTitulo } = linha; ({ data, error } = await enviar(semTitulo)); }
+  if (_semColuna(error)) {
+    const { titulo, previsao_fechamento, ...basico } = linha;
+    ({ data, error } = await enviar(basico));
+  }
   if (error) throw error;
   return data;
+}
+
+/* Motivos de perda da organizacao. Tabela, nao lista fixa: os motivos de quem
+   vende treinamento nao sao os de quem vende equipamento. */
+export async function motivosPerda() {
+  if (_origem !== 'banco') return [];
+  const { data, error } = await _sb.from('crm_motivos_perda')
+    .select('id, nome').eq('org_id', sessao.orgId())
+    .is('arquivado_em', null).order('ordem');
+  if (error && !_semColuna(error) && error.code !== '42P01') throw error;
+  return data || [];
+}
+
+export async function salvarMotivoPerda(form) {
+  if (_origem !== 'banco') return _simulado();
+  const linha = { org_id: sessao.orgId(), nome: (form.nome||'').trim(), ordem: form.ordem ?? 99 };
+  if (!linha.nome) throw new Error('Informe o motivo.');
+  const { data, error } = await _sb.from('crm_motivos_perda').insert(linha).select('id').single();
+  if (error) throw error;
+  return data;
+}
+
+/* Marcar perdido guardando POR QUE. Uma taxa de perda sem motivo nao ensina
+   nada — e o motivo so e verdadeiro se for perguntado na hora, nao depois. */
+export async function perderLead(id, { motivo_id = null, observacao = null } = {}) {
+  if (_origem !== 'banco') return _simulado();
+  const f = await funil();
+  const etapa = f.etapas.find(e => e.tipo === 'perdido');
+  if (!etapa) throw new Error('Este funil não tem etapa de perda configurada.');
+  const linha = { etapa_id: etapa.id };
+  linha.motivo_perda_id = motivo_id || null;
+  linha.motivo_perda_obs = observacao || null;
+  let { error } = await _sb.from('crm_leads').update(linha).eq('id', id);
+  if (_semColuna(error)) ({ error } = await _sb.from('crm_leads').update({ etapa_id: etapa.id }).eq('id', id));
+  if (error) throw error;
+  return true;
+}
+
+/* Quanto deve fechar no periodo, e o que ja passou da data sem fechar. */
+export async function previsaoDoMes(mesRef = new Date()) {
+  const leads = await listar('crm_leads');
+  const ini = new Date(mesRef.getFullYear(), mesRef.getMonth(), 1);
+  const fim = new Date(mesRef.getFullYear(), mesRef.getMonth() + 1, 0, 23, 59, 59);
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const abertos = leads.filter(l => estagios.ehAberta(l.estagio));
+  const doMes = abertos.filter(l => l.previsao && new Date(l.previsao + 'T12:00') >= ini && new Date(l.previsao + 'T12:00') <= fim);
+  const vencidos = abertos.filter(l => l.previsao && new Date(l.previsao + 'T12:00') < hoje);
+  const soma = (a) => a.reduce((s,l) => s + (l.valor||0), 0);
+  return { doMes, vencidos, semPrevisao: abertos.filter(l => !l.previsao),
+           valorDoMes: soma(doMes), valorVencido: soma(vencidos) };
 }
 
 export async function moverLead(id, slug, funilId = null) {
@@ -556,6 +616,87 @@ export async function salvarAtividade(form) {
 /* Arrastar uma atividade entre as colunas do quadro. As colunas sao estados de
    tempo, entao o que muda e a data de vencimento — menos "hoje", que tambem
    reabre uma atividade ja concluida (arrastar de volta desfaz). */
+/* ══════════════════════════════════════════════════════════════════════════
+   FICHA DA EMPRESA
+   A pergunta que o comercial faz antes de ligar — "o que ja aconteceu com esta
+   empresa?" — nao tinha resposta no produto: o negocio guarda `empresa` como
+   texto e `cliente_id` so era preenchido na conversao.
+
+   Aqui juntamos os dois caminhos: o vinculo formal (cliente_id) E o nome, para
+   que o historico anterior a virar cliente nao fique invisivel. E a mesma
+   ideia de "conta" dos CRMs de mercado, feita sobre o que ja existe — sem
+   coluna nova e sem migrar dado.
+   ══════════════════════════════════════════════════════════════════════════ */
+export async function fichaEmpresa(clienteId) {
+  if (_origem !== 'banco') return null;
+  const org = sessao.orgId();
+
+  const { data: cli, error } = await _sb.from('clientes')
+    .select('*').eq('org_id', org).eq('id', clienteId).maybeSingle();
+  if (error) throw error;
+  if (!cli) return null;
+
+  const [negocios, contatos, atividades] = await Promise.all([
+    listar('crm_leads', { filtro: { funil_id: null } }).catch(() => []),
+    listar('crm_contatos').catch(() => []),
+    listar('crm_atividades').catch(() => [])
+  ]);
+
+  /* Casa por vinculo OU por nome. Comparacao sem acento e sem caixa, porque
+     "Metalurgica Souza" e "Metalúrgica Souza" sao a mesma empresa para quem
+     vende — e sao duas para o banco. */
+  const chave = (t) => String(t || '').toLowerCase().normalize('NFD')
+    .replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '');
+  const alvo = chave(cli.nome);
+  const daEmpresa = (l) => l.cliente_id === clienteId || (alvo && chave(l.empresa) === alvo);
+
+  const meus = negocios.filter(daEmpresa);
+  const idsMeus = new Set(meus.map(l => l.id));
+  const meusContatos = contatos.filter(c => c.cliente_id === clienteId);
+  const idsContato = new Set(meusContatos.map(c => c.id));
+
+  const minhasAtividades = atividades.filter(a =>
+       (a.alvo_tipo === 'lead' && idsMeus.has(a.alvo_id))
+    || (a.alvo_tipo === 'cliente' && a.alvo_id === clienteId)
+    || (a.alvo_tipo === 'contato' && idsContato.has(a.alvo_id)));
+
+  const soma = (arr) => arr.reduce((s, l) => s + (l.valor || 0), 0);
+  const ganhos   = meus.filter(l => estagios.ehGanho(l.estagio));
+  const perdidos = meus.filter(l => estagios.ehPerdido(l.estagio));
+  const abertos  = meus.filter(l => estagios.ehAberta(l.estagio));
+
+  return {
+    cliente: cli,
+    negocios: meus, contatos: meusContatos, atividades: minhasAtividades,
+    resumo: {
+      abertos: abertos.length,   valorAberto: soma(abertos),
+      ganhos: ganhos.length,     valorGanho: soma(ganhos),
+      perdidos: perdidos.length, valorPerdido: soma(perdidos),
+      conversao: (ganhos.length + perdidos.length)
+        ? Math.round(ganhos.length / (ganhos.length + perdidos.length) * 100) : null,
+      primeiroContato: meus.length ? meus.map(l => l.criado_em).filter(Boolean).sort()[0] : null
+    }
+  };
+}
+
+/* Empresas com movimento no CRM, para a lista da ficha. */
+export async function empresasDoCrm() {
+  if (_origem !== 'banco') return [];
+  const [cli, leads] = await Promise.all([clientes(), listar('crm_leads').catch(() => [])]);
+  const chave = (t) => String(t || '').toLowerCase().normalize('NFD')
+    .replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '');
+  const porNome = new Map(cli.map(c => [chave(c.nome), c]));
+  const contagem = new Map();
+  for (const l of leads) {
+    const c = (l.cliente_id && cli.find(x => x.id === l.cliente_id)) || porNome.get(chave(l.empresa));
+    if (!c) continue;
+    const r = contagem.get(c.id) || { ...c, negocios: 0, valor: 0 };
+    r.negocios++; r.valor += (l.valor || 0);
+    contagem.set(c.id, r);
+  }
+  return [...contagem.values()].sort((a, b) => b.valor - a.valor);
+}
+
 /* A trilha real de um negocio: quem mudou o que, e quando. O gatilho do banco
    grava isto desde a Fase A (crm_lead_historico) — mas a ficha do lead exibia
    uma linha do tempo INVENTADA, com datas escritas no codigo e um "Proposta

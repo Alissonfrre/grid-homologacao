@@ -47,6 +47,10 @@ export default {
       alternativa:{ rotulo:'Ver status dos números', acao:'ir:crm-numeros-status' },
       rota:() => import('./numeros.js') },
 
+    { id:'crm-empresa',     rotulo:'Empresas', icone:'building',
+      perfis:['administrador','comercial'], mobile:true,
+      rota:() => import('./empresa.js') },
+
     /* Configuracao do funil: chega pelo botao no topo do Funil de vendas, nao
        pelo menu — e tela de ajuste, nao de trabalho diario. */
     { id:'crm-funis', rotulo:'Configuração do funil', icone:'settings', oculto:true,

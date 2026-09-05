@@ -23,6 +23,27 @@ export async function render() {
 
   const soma = (arr) => arr.reduce((s, l) => s + (l.valor || 0), 0);
 
+  /* Previsao: so negocio aberto com data. E "perdemos por que": agrupamento
+     dos negocios perdidos por motivo, do mais frequente para o menos. Os dois
+     saem dos leads ja carregados — nenhuma consulta a mais no painel. */
+  const hoje0 = new Date(); hoje0.setHours(0,0,0,0);
+  const fimMes = new Date(hoje0.getFullYear(), hoje0.getMonth() + 1, 0);
+  const comData = abertos.filter(l => l.previsao);
+  const noMes = comData.filter(l => new Date(l.previsao + 'T12:00') <= fimMes);
+  const previsao = {
+    total: noMes.length, valor: soma(noMes),
+    vencidos: comData.filter(l => new Date(l.previsao + 'T12:00') < hoje0).length,
+    semData: abertos.filter(l => !l.previsao).length
+  };
+
+  const porMotivo = new Map();
+  for (const l of leads.filter(x => x.motivo_perda)) {
+    const m = porMotivo.get(l.motivo_perda) || { nome: l.motivo_perda, n: 0, valor: 0 };
+    m.n++; m.valor += (l.valor || 0);
+    porMotivo.set(l.motivo_perda, m);
+  }
+  const perdas = [...porMotivo.values()].sort((a, b) => b.n - a.n).slice(0, 6);
+
   return `
   ${ui.topo({
     modulo:'CRM', moduloIcone:'funnel',
@@ -80,6 +101,39 @@ export async function render() {
     ${ui.cartao(
       ui.cartaoTitulo('Atividades de hoje', 'activity', { rotulo:'Ver todas', acao:'ir:crm-atividades' }) +
       (hoje.length ? hoje.map(linhaAtividade).join('') : ui.vazio({ icone:'check', titulo:'Nada marcado para hoje' })),
+      { plano:true })}
+  </div>
+
+  ${ui.secao('Previsão e perdas do mês')}
+  <div class="home-2col">
+    ${ui.cartao(`
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+        ${icone('calendar')}<span class="ds-card-titulo">Previsão de fechamento</span></div>
+      ${previsao.total ? `
+        <div style="display:flex;gap:28px;flex-wrap:wrap">
+          ${indicador(ui.fmt.moeda(previsao.valor), 'Previsto até o fim do mês')}
+          ${indicador(String(previsao.total), 'Negócios com data')}
+          ${previsao.vencidos ? `<div><div class="num" style="font-size:var(--fs-6);font-weight:700;color:var(--atencao-text)">${previsao.vencidos}</div>
+            <div style="font-size:var(--fs-2);color:var(--atencao-text);margin-top:2px">Com data vencida</div></div>` : ''}
+        </div>
+        ${previsao.semData ? `<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);
+          font-size:var(--fs-2);color:var(--text-3);line-height:1.6">
+          ${previsao.semData} negócio${previsao.semData>1?'s':''} em aberto sem data de previsão — sem ela, o valor do funil não vira previsão de caixa.</div>` : ''}`
+      : ui.vazio({ icone:'calendar', titulo:'Nenhum negócio com data de previsão',
+                   sub:'Preencha "Previsão de fechamento" ao editar um negócio para o funil virar previsão de caixa.' })}`)}
+
+    ${ui.cartao(
+      ui.cartaoTitulo('Por que perdemos', 'trend') +
+      (perdas.length
+        ? `<div style="display:flex;flex-direction:column;gap:10px;margin-top:4px">${perdas.map(m => `
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="font-size:var(--fs-2);color:var(--text-2);width:150px;flex-shrink:0">${ui.esc(m.nome)}</span>
+              <div style="flex:1;height:8px;background:var(--gray-100);border-radius:4px">
+                <div style="width:${Math.round(m.n / perdas[0].n * 100)}%;height:8px;background:var(--atencao);border-radius:4px"></div></div>
+              <span class="num" style="font-size:var(--fs-2);color:var(--text-3);width:74px;text-align:right">${m.n} · ${ui.fmt.moeda(m.valor)}</span>
+            </div>`).join('')}</div>`
+        : ui.vazio({ icone:'check', titulo:'Nenhuma perda registrada com motivo',
+                     sub:'Ao marcar um negócio como perdido, o motivo é pedido — e aparece aqui.' })),
       { plano:true })}
   </div>
 
