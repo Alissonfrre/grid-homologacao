@@ -10,7 +10,7 @@
 // o mesmo número, exatamente como em produção. A disciplina é a mesma; o que
 // muda é o lugar.
 
-const BUILD    = 'h32';
+const BUILD    = 'h33';
 const CACHE    = 'grid-homolog-' + BUILD;
 const FALLBACK = './app.html';
 
@@ -18,10 +18,59 @@ const ASSETS = [
   './manifest.json',
 ];
 
+// ── PRECACHE DE CÓDIGO (05/09, h33) ────────────────────────────────────────
+// Por que isto existe: o network-first do h28 só vale DEPOIS que este service
+// worker assume a página. No primeiro carregamento após uma publicação, quem
+// responde é o cache HTTP do navegador — e o GitHub Pages manda
+// `Cache-Control: max-age=600`, então por dez minutos o navegador serve o
+// módulo ANTIGO sem perguntar a ninguém. Foi o que aconteceu entre o h31 e o
+// h32: `APP_BUILD` dizia h32 e `dados.js` era o do h31.
+//
+// A correção: no `install` — que roda toda vez que este arquivo muda, e ele
+// muda a cada BUILD — buscar cada módulo com `cache: 'reload'`, que ignora o
+// cache HTTP, e guardar no cache desta versão. Quando o service worker ativa,
+// o código novo já está lá.
+//
+// Se um arquivo novo for esquecido nesta lista, ele apenas cai no fetch
+// normal (network-first) — degrada, não quebra.
+const CODIGO = [
+  './modulos/crm/acoes.js',
+  './modulos/crm/atividades.js',
+  './modulos/crm/contatos.js',
+  './modulos/crm/conversas.js',
+  './modulos/crm/crm.css',
+  './modulos/crm/empresa.js',
+  './modulos/crm/exemplo.js',
+  './modulos/crm/funil.js',
+  './modulos/crm/funis.js',
+  './modulos/crm/lead.js',
+  './modulos/crm/modulo.js',
+  './modulos/crm/numeros.js',
+  './modulos/crm/painel.js',
+  './modulos/treinamentos/modulo.js',
+  './nucleo/config.js',
+  './nucleo/dados.js',
+  './nucleo/design-system-aditivo.css',
+  './nucleo/design-system.css',
+  './nucleo/estagios.js',
+  './nucleo/icones.js',
+  './nucleo/navegacao.js',
+  './nucleo/plataforma.js',
+  './nucleo/sessao.js',
+  './nucleo/ui.js',
+];
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE)
-      .then((cache) => Promise.all(ASSETS.map((u) => cache.add(u).catch(() => null))))
+      .then((cache) => Promise.all([
+        ...ASSETS.map((u) => cache.add(u).catch(() => null)),
+        // `cache: 'reload'` é o ponto todo: sem ele, esta busca também sairia
+        // do cache HTTP e guardaríamos a versão velha no cache novo.
+        ...CODIGO.map((u) => fetch(u, { cache: 'reload' })
+          .then((res) => res && res.ok ? cache.put(u, res) : null)
+          .catch(() => null))
+      ]))
       .then(() => self.skipWaiting())
   );
 });
