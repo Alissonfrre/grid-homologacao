@@ -21,6 +21,17 @@ export const fmt = {
   moeda: (n) => 'R$ ' + Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }),
   data:  (d) => d ? new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '—',
   hora:  (d) => d ? new Date(d).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '',
+  /* CNPJ vem do banco em formatos diferentes: uns gravados com mascara
+     ("44.444.444/0001-44"), outros so com barra e traco ("10002984/0001-56"),
+     e os que a consulta da Receita devolve sao 14 digitos crus. A tela mostrava
+     o que estivesse gravado, entao a mesma coluna tinha tres aparencias. Formata
+     na exibicao; o que esta gravado nao muda. Se nao tiver 14 digitos, devolve
+     como veio — inventar pontuacao em dado incompleto e pior do que mostrar cru. */
+  cnpj: (v) => {
+    const d = String(v || '').replace(/\D/g, '');
+    if (d.length !== 14) return v || '';
+    return `${d.slice(0,2)}.${d.slice(2,5)}.${d.slice(5,8)}/${d.slice(8,12)}-${d.slice(12)}`;
+  },
   telefone: (t) => {
     const s = String(t || '').replace(/\D/g, '');
     if (s.length === 13) return `+${s.slice(0,2)} ${s.slice(2,4)} ${s.slice(4,9)}-${s.slice(9)}`;

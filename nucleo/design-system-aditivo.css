@@ -202,3 +202,40 @@
    quem e clicavel. Isso tira ~30 sombras simultaneas das telas mais densas. */
 .ds-kpi{box-shadow:none}
 .ds-kpi[data-acao]:hover{box-shadow:var(--shadow);border-color:var(--border-2)}
+
+/* ── Lista "Requer atenção" (05/09, h36) ───────────────────────────────────
+   Substitui o alerta de caixa tinta que existia inline em três telas. O que
+   estava errado ali não era contraste — o texto media 6,66:1 — era hierarquia:
+   fundo, borda, ícone, texto e botão tinham TODOS a mesma cor, então nada se
+   destacava de nada, e quatro caixas empilhadas viravam uma mancha só.
+
+   Agora a cor aparece uma vez por linha, num filete de 3px, e o resto é
+   neutro. O número sai do meio da frase e vira a primeira coisa da linha —
+   ele é o dado, a frase é só o contexto.
+
+   A ordem é por gravidade (ver _alertaLista em app.html): com o grave sempre
+   no topo, a POSIÇÃO já diz o que é urgente, e o filete não precisa gritar. */
+.ds-alertas{margin-bottom:14px}
+.ds-alerta{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  padding:10px 14px 10px 12px;background:var(--surface);
+  border:1px solid var(--border);border-radius:10px;margin-bottom:5px}
+.ds-alerta:last-child{margin-bottom:0}
+.ds-alerta.clicavel{cursor:pointer;transition:border-color .12s,background .12s}
+.ds-alerta.clicavel:hover{border-color:var(--border-2);background:var(--gray-50)}
+/* align-self:stretch faz o filete acompanhar a altura da linha — inclusive
+   quando o texto quebra em duas linhas no celular. */
+.ds-alerta .fil{width:3px;align-self:stretch;min-height:20px;border-radius:3px;
+  flex-shrink:0;background:var(--amber)}
+.ds-alerta.grave .fil{background:var(--red)}
+.ds-alerta .num{font-size:19px;font-weight:800;letter-spacing:-.7px;
+  /* 38px cabe tres digitos: e o que mantem os numeros numa coluna de verdade.
+     Medido — com 22px, "12" empurrava a frase 3px para a direita e o alinhamento
+     que justifica esta opcao se desfazia justamente quando o numero cresce. */
+  font-variant-numeric:tabular-nums;min-width:38px;text-align:right;
+  line-height:1.15;flex-shrink:0;color:var(--text-1)}
+.ds-alerta .tx{flex:1;min-width:150px;font-size:12.5px;line-height:1.45;color:var(--text-2)}
+.ds-alerta .tx b{font-weight:700;color:var(--text-1)}
+.ds-alerta .ac{display:inline-flex;align-items:center;gap:2px;font-size:11.5px;
+  font-weight:600;color:var(--text-2);white-space:nowrap;
+  background:transparent;border:0;padding:0;font-family:inherit;cursor:pointer}
+.ds-alerta .ac svg{width:13px;height:13px;color:var(--text-3);flex-shrink:0}

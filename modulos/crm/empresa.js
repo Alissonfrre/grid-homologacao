@@ -33,7 +33,7 @@ export async function render(params = {}) {
   ${ui.topo({
     voltar:{ rotulo:'Empresas', acao:'ir:crm-empresa' },
     titulo: cliente.nome,
-    sub: [cliente.naoCadastrada ? 'Ainda não cadastrada em Clientes' : (cliente.cnpj ? 'CNPJ ' + ui.esc(cliente.cnpj) : 'sem CNPJ'),
+    sub: [cliente.naoCadastrada ? 'Ainda não cadastrada em Clientes' : (cliente.cnpj ? 'CNPJ ' + ui.esc(ui.fmt.cnpj(cliente.cnpj)) : 'sem CNPJ'),
           cliente.cidade || null,
           resumo.primeiroContato ? 'primeiro negócio em ' + ui.fmt.data(resumo.primeiroContato) : null]
          .filter(Boolean).join(' · '),
@@ -62,7 +62,7 @@ export async function render(params = {}) {
     <div style="display:flex;flex-direction:column;gap:12px">
       ${ui.cartao(`<div class="ds-card-titulo" style="margin-bottom:12px">Dados da empresa</div>
         ${dado('Razão social', cliente.nome)}
-        ${dado('CNPJ', cliente.cnpj)}
+        ${dado('CNPJ', ui.fmt.cnpj(cliente.cnpj))}
         ${dado('Cidade', cliente.cidade)}
         ${dado('Telefone', cliente.telefone ? ui.fmt.telefone(cliente.telefone) : null)}
         ${dado('E-mail', cliente.email)}`)}
@@ -131,6 +131,11 @@ async function listaDeEmpresas() {
   const naPagina = lista.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA);
 
   const cidades = [...new Set(todas.map(e => e.cidade).filter(Boolean))].sort();
+  /* Cidade so existe em quem esta cadastrado em `clientes`. Como a maior parte
+     da lista sao contas que ainda nao foram cadastradas, filtrar por cidade
+     esconde essas contas sem dizer por que — a pessoa conclui que Joinville tem
+     2 empresas quando tem 2 CADASTRADAS. O aviso diz quantas ficaram de fora. */
+  const semCidade = todas.filter(e => !e.cidade).length;
 
   return `
   ${ui.topo({ modulo:'CRM', moduloIcone:'building', titulo:'Empresas',
@@ -159,6 +164,10 @@ async function listaDeEmpresas() {
     ]
   })}
 
+  ${_cidade && semCidade ? ui.aviso({ tipo:'info', icone:'info',
+    titulo:'Filtro de cidade alcança só empresas cadastradas',
+    texto:`${semCidade} ${semCidade === 1 ? 'conta ainda não cadastrada em Clientes ficou' : 'contas ainda não cadastradas em Clientes ficaram'} de fora: cidade só existe no cadastro.` }) : ''}
+
   ${lista.length ? ui.tabela({
     ordem: _ordem,
     acaoLinha: (e) => `ir:crm-empresa:${e.chaveConta}`,
@@ -167,7 +176,7 @@ async function listaDeEmpresas() {
         render:(e) => `<div class="prim">${ui.esc(e.nome)}</div>
           <div class="sub">${e.naoCadastrada
             ? '<span style="color:var(--text-3)">ainda não cadastrada em Clientes</span>'
-            : (e.cnpj ? 'CNPJ ' + ui.esc(e.cnpj) : 'sem CNPJ') + (e.cidade ? ' · ' + ui.esc(e.cidade) : '')}</div>` },
+            : (e.cnpj ? 'CNPJ ' + ui.esc(ui.fmt.cnpj(e.cnpj)) : 'sem CNPJ') + (e.cidade ? ' · ' + ui.esc(e.cidade) : '')}</div>` },
       { campo:'abertos', rotulo:'Em aberto', dir:true,
         render:(e) => e.abertos ? `<span class="prim">${e.abertos}</span>` : `<span style="color:var(--text-3)">—</span>` },
       { campo:'ganhos', rotulo:'Fechados', dir:true,

@@ -140,7 +140,6 @@ body.modo-suporte-ativo .sidebar{top:var(--suporte-h,34px)}
 .sidebar-item{position:relative;display:flex;align-items:center;gap:10px;padding:9px 10px 9px 12px;border-radius:var(--r-md);cursor:pointer;color:rgba(255,255,255,.72);font-size:13px;font-weight:500;transition:background .12s,color .12s;margin-bottom:2px}
 .sidebar-item:hover{background:rgba(255,255,255,.05);color:rgba(255,255,255,.92)}
 .sidebar-item.active{background:rgba(255,255,255,.07);color:#fff;font-weight:600}
-.sidebar-item.active::before{content:'';position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:0 3px 3px 0;background:var(--amber)}
 .sidebar-item.active::before{content:'';position:absolute;left:0;top:7px;bottom:7px;width:3px;border-radius:0 3px 3px 0;background:var(--amber)}
 .si-badge{margin-left:auto;background:var(--amber);color:var(--navy);font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:999px;line-height:1.6;flex-shrink:0}
 .si-icon{font-size:17px;width:20px;text-align:center;flex-shrink:0;display:flex;align-items:center;justify-content:center}
@@ -1003,7 +1002,7 @@ body.modo-suporte-ativo .sino-painel{top:calc(60px + var(--suporte-h,34px))}
    classico continua identico, e e por isso que producao nao muda. */
 .mod-head{display:flex;align-items:center;gap:9px;padding:9px 12px;margin:10px 10px 3px;border-radius:var(--r-md);cursor:pointer;color:rgba(255,255,255,.52);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;user-select:none}
 .mod-head:hover{background:rgba(255,255,255,.06)}
-.mod-bloco.aberto .mod-head{color:rgba(255,255,255,.85)}
+.mod-bloco.aberto .mod-head{color:rgba(255,255,255,.62)}
 .mod-head .mh-ic{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
 .mod-head .mh-ic svg{width:15px;height:15px}
 .mod-head .cnt{background:var(--amber);color:var(--navy);font-size:10px;font-weight:700;border-radius:999px;padding:1px 6px;margin-left:auto}
@@ -1746,7 +1745,7 @@ function _htmlDeltaKpi(atual, anterior, opts) {
 // sino de notificações fixo (mesmo texto, mesma ação, um só lugar pra
 // manter).
 function _btnAcao(label, onclick) {
-  return `<button onclick="event.stopPropagation();${onclick}" style="flex-shrink:0;padding:5px 10px;border-radius:var(--r-sm);border:none;background:rgba(255,255,255,.55);color:var(--navy);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">${label}</button>`;
+  return `<button onclick="event.stopPropagation();${onclick}" style="flex-shrink:0;padding:5px 10px;border-radius:var(--r-sm);background:var(--gray-100);border:1px solid var(--border);color:var(--navy);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">${label}</button>`;
 }
 
 // Calcula a Central de Alertas do Provedor — fonte única de verdade,
@@ -1933,7 +1932,7 @@ function _renderPainelSino() {
         <div onclick="_fecharSino();verOrgProvedor('${a.orgId}')" style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;flex-wrap:wrap">
           <span style="font-size:13px">${a.tipo==='critico'?'🔴':'<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4.5M12 17.2h.01"/></svg>'}</span>
           <span style="font-size:12.5px;color:var(--text-1);flex:1;min-width:140px">${a.texto}</span>
-          ${a.acaoHtml ? a.acaoHtml.replace(/rgba\(255,255,255,\.55\)/g, 'var(--gray-100)') : ''}
+          ${a.acaoHtml || ''}
           ${_htmlBtnDispensar(a)}
         </div>`).join('')
         : '<div style="padding:24px 14px;text-align:center;font-size:12.5px;color:var(--text-3)">Nenhum alerta no momento</div>'}
@@ -3851,8 +3850,45 @@ function _ligarAcoesDeModulo() {
     const el = ev.target.closest('[data-acao]');
     if (!el || !dentroDeModulo(el)) return;
     if (el.tagName !== 'SELECT' && el.type !== 'search') return;
+    // O campo de busca ja foi tratado pelo ouvinte de digitacao abaixo; deixar
+    // o `change` disparar de novo ao sair do campo redesenharia a tela a toa.
+    if (el.type === 'search') return;
     const acao = el.dataset.acao;
     if (acao) await _GRID.tratarAcao(acao + ':' + el.value);
+  });
+
+  // ── Busca enquanto digita ──────────────────────────────────────────────
+  // A busca so respondia ao evento `change`, que num input[type=search] so
+  // dispara com Enter ou ao sair do campo. Quem digitava "ceramica" e olhava
+  // a tela via a lista inteira parada e concluia que a busca nao funcionava.
+  // Agora responde a digitacao, com uma pausa de 250ms para nao redesenhar a
+  // tela a cada tecla.
+  //
+  // O redesenho refaz a tela inteira, entao o campo em que a pessoa estava
+  // digitando deixa de existir: o foco cai no body e a letra seguinte se
+  // perde. Por isso o foco e a posicao do cursor sao guardados antes e
+  // devolvidos depois, no campo de mesmo id que estiver visivel — a casca
+  // desenha dois corpos (computador e celular) com os mesmos ids, e devolver
+  // o foco para o invisivel seria o mesmo que perde-lo.
+  let _tBusca = null;
+  document.addEventListener('input', (ev) => {
+    if (!_GRID) return;
+    const el = ev.target.closest('[data-acao]');
+    if (!el || !dentroDeModulo(el) || el.type !== 'search') return;
+    const acao = el.dataset.acao;
+    if (!acao) return;
+    clearTimeout(_tBusca);
+    _tBusca = setTimeout(async () => {
+      const id  = el.id;
+      const pos = el.selectionStart;
+      await _GRID.tratarAcao(acao + ':' + el.value);
+      if (!id) return;
+      const volta = [...document.querySelectorAll('[id="' + CSS.escape(id) + '"]')]
+        .find((c) => c.getBoundingClientRect().width > 0);
+      if (!volta || volta === document.activeElement) return;
+      volta.focus();
+      try { volta.setSelectionRange(pos, pos); } catch (e) { /* input sem selecao */ }
+    }, 250);
   });
 }
 
@@ -4229,17 +4265,16 @@ async function renderHomeProvedor() {
   _setSinoAlertas(alertas);
   _limparDispensasResolvidas(dispensadosRows, chavesAtuais); // segundo plano, não bloqueia o render
 
-  const htmlAlertas = alertas.length ? `
-    <div style="margin-bottom:14px">
-      ${alertas.slice(0,6).map(a => `
-        <div onclick="verOrgProvedor('${a.orgId}')" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--r-md);margin-bottom:6px;cursor:pointer;flex-wrap:wrap;background:${a.tipo==='critico'?'var(--red-l)':'var(--amber-l)'};border-left:3px solid ${a.tipo==='critico'?'var(--red)':'var(--amber)'}">
-          <span style="font-size:15px">${a.tipo==='critico'?'🔴':'<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4.5M12 17.2h.01"/></svg>'}</span>
-          <span style="font-size:13px;color:${a.tipo==='critico'?'var(--red-text)':'var(--amber-text)'};font-weight:500;flex:1;min-width:160px">${a.texto}</span>
-          ${a.acaoHtml || ''}
-          <span style="font-size:11px;color:var(--text-3)">Ver</span>
-          ${_htmlBtnDispensar(a)}
-        </div>`).join('')}
-    </div>` : '';
+  // Alertas do Provedor no mesmo componente do Inicio do cliente. Estes nao
+  // trazem numero — sao sobre uma organizacao, nao sobre uma contagem —, e o
+  // componente simplesmente nao desenha a coluna do numero quando ela falta.
+  const htmlAlertas = _alertaLista(alertas.slice(0, 6).map(a => ({
+    grave: a.tipo === 'critico',
+    texto: a.texto,
+    acaoHtml: (a.acaoHtml || '') + `<span class="ac">Ver${_CHEVRON_ALERTA}</span>`,
+    aoClicar: `verOrgProvedor('${a.orgId}')`,
+    extra: _htmlBtnDispensar(a)
+  })));
 
   const _badgePlano = (plano, ativo) => {
     if (!ativo) return '<span class="badge badge-gray">Inativa</span>';
@@ -5347,9 +5382,10 @@ async function renderHomeAdmin() {
   );
   if (semInstrutor.length > 0) {
     alertas.push({
-      tipo: 'warning',
-      icone: '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><path d="M20 21v-2a5 5 0 0 0-5-5H9a5 5 0 0 0-5 5v2"/><circle cx="12" cy="7" r="4"/></svg>',
-      texto: `${semInstrutor.length} aula${semInstrutor.length!==1?'s':''} nos próximos 7 dias sem instrutor atribuído`,
+      grave: false,
+      n: semInstrutor.length,
+      unidade: `aula${semInstrutor.length!==1?'s':''}`,
+      texto: 'nos próximos 7 dias sem instrutor atribuído',
       acao: "irParaTurmasFiltradas('em_andamento')",
       label: 'Ver turmas',
     });
@@ -5363,9 +5399,10 @@ async function renderHomeAdmin() {
   });
   if (travadas.length > 0) {
     alertas.push({
-      tipo: 'warning',
-      icone: '⏸',
-      texto: `${travadas.length} turma${travadas.length!==1?'s':''} em andamento sem próximas aulas agendadas`,
+      grave: false,
+      n: travadas.length,
+      unidade: `turma${travadas.length!==1?'s':''}`,
+      texto: 'em andamento sem próximas aulas agendadas',
       acao: "irParaTurmasFiltradas('em_andamento')",
       label: 'Verificar',
     });
@@ -5383,9 +5420,10 @@ async function renderHomeAdmin() {
   });
   if (atrasadas.length > 0) {
     alertas.push({
-      tipo: 'danger',
-      icone: '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4.5M12 17.2h.01"/></svg>',
-      texto: `${atrasadas.length} turma${atrasadas.length!==1?'s':''} com data de início no passado ainda aguardando início`,
+      grave: true,
+      n: atrasadas.length,
+      unidade: `turma${atrasadas.length!==1?'s':''}`,
+      texto: 'com data de início no passado ainda aguardando início',
       acao: "irParaTurmasFiltradas('agendada')",
       label: 'Revisar',
     });
@@ -5399,24 +5437,51 @@ async function renderHomeAdmin() {
   const comPendencia = tAll.filter(t => _turmaPendencias(t, sesAll.filter(s => s.turma_id === t.id)).length > 0);
   if (comPendencia.length > 0) {
     alertas.push({
-      tipo: 'warning',
-      icone: '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM9 12h6M9 16h4"/></svg>',
-      texto: `${comPendencia.length} turma${comPendencia.length!==1?'s':''} com pendência de cadastro (participantes, local ou instrutor)`,
+      grave: false,
+      n: comPendencia.length,
+      unidade: `turma${comPendencia.length!==1?'s':''}`,
+      texto: 'com pendência de cadastro (participantes, local ou instrutor)',
       acao: "irParaTurmasComPendencia()",
       label: 'Ver turmas',
     });
   }
 
-  const alertasHtml = alertas.map(a => {
-    const bg    = a.tipo==='danger' ? 'rgba(220,38,38,.08)' : 'rgba(245,158,11,.08)';
-    const borda = a.tipo==='danger' ? 'rgba(220,38,38,.3)' : 'rgba(245,158,11,.3)';
-    const cor   = a.tipo==='danger' ? '#B91C1C' : '#92400E';
-    return `<div style="background:${bg};border:1px solid ${borda};border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px;margin-bottom:8px">
-      <span style="font-size:16px;flex-shrink:0">${a.icone}</span>
-      <div style="flex:1;font-size:12px;color:${cor};font-weight:500;line-height:1.4">${a.texto}</div>
-      <button onclick="${a.acao}" style="border:1px solid ${borda};background:transparent;color:${cor};font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;cursor:pointer;white-space:nowrap;font-family:inherit">${a.label}</button>
-    </div>`;
-  }).join('');
+// ── Lista "Requer atenção" ────────────────────────────────────────────────
+// Um construtor para as três telas que mostravam alerta. Antes cada uma tinha
+// o seu, escrito com estilo inline, e a mesma decisão visual estava copiada em
+// três lugares — mudar o formato exigia lembrar dos três.
+//
+// Cada item: { grave, n, unidade, texto, acao, acaoHtml, aoClicar, extra }
+//   grave    → filete vermelho e sobe para o topo
+//   n        → o número, quando existe. Sai da frase e vira a primeira coisa
+//              da linha. Alerta sem número (os do Provedor) simplesmente não
+//              o passa, e o texto ocupa o lugar.
+//   unidade  → "turmas", "aulas" — o negrito que acompanha o número
+//   acao     → rótulo do link à direita ("Revisar"); acaoHtml para casos que
+//              já trazem HTML próprio
+//   aoClicar → JS do clique na linha inteira
+//   extra    → HTML solto no fim da linha (o botão de dispensar do Provedor)
+//
+// A ordenação por gravidade é do componente, não de quem chama: é ela que faz
+// a POSIÇÃO comunicar urgência, o que permite o filete ser discreto.
+const _CHEVRON_ALERTA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>';
+function _alertaLista(itens) {
+  if (!itens || !itens.length) return '';
+  const ordenados = [...itens].sort((a, b) => (a.grave ? 0 : 1) - (b.grave ? 0 : 1));
+  return `<div class="ds-alertas">${ordenados.map(a => `
+    <div class="ds-alerta ${a.grave ? 'grave' : ''} ${a.aoClicar ? 'clicavel' : ''}"${a.aoClicar ? ` onclick="${a.aoClicar}"` : ''}>
+      <span class="fil"></span>
+      ${a.n != null ? `<span class="num">${a.n}</span>` : ''}
+      <div class="tx">${a.unidade ? `<b>${a.unidade}</b> ` : ''}${a.texto}</div>
+      ${a.acaoHtml || (a.acao ? `<span class="ac">${a.acao}${_CHEVRON_ALERTA}</span>` : '')}
+      ${a.extra || ''}
+    </div>`).join('')}</div>`;
+}
+
+  const alertasHtml = _alertaLista(alertas.map(a => ({
+    grave: a.grave, n: a.n, unidade: a.unidade, texto: a.texto,
+    acao: a.label, aoClicar: a.acao
+  })));
 
   // ── Primeiros passos (onboarding guiado) ──────────────────────
   // Não é um flag "dispensado" salvo em algum lugar — o próprio dado real
@@ -5634,11 +5699,11 @@ async function renderHomeComercial() {
 
     ${nPendencia > 0 ? `
     <div class="gh-sec"><div class="dot red"></div><span>Requer atenção</span><div class="line"></div></div>
-    <div onclick="irParaTurmasComPendencia()" style="cursor:pointer;background:var(--warn-l);border:1px solid rgba(217,119,6,.3);border-left:3px solid var(--warn);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:10px;margin-bottom:14px">
-      <span style="font-size:16px;flex-shrink:0"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4.5M12 17.2h.01"/></svg></span>
-      <div style="flex:1;font-size:12.5px;color:var(--warn-text);font-weight:500;line-height:1.4">${nPendencia} turma${nPendencia!==1?'s':''} com pendência (participantes, local ou instrutor)</div>
-      <span style="font-size:11px;color:var(--warn-text);font-weight:600;white-space:nowrap">Ver</span>
-    </div>` : ''}
+    ${_alertaLista([{
+      grave: false, n: nPendencia, unidade: `turma${nPendencia!==1?'s':''}`,
+      texto: 'com pendência (participantes, local ou instrutor)',
+      acao: 'Ver', aoClicar: 'irParaTurmasComPendencia()'
+    }])}` : ''}
 
     <div class="gh-sec"><div class="dot"></div><span>Próximas turmas agendadas</span><div class="line"></div><span class="glink" data-nav="turmas">Todas</span></div>
     <div class="home-list-card" style="margin-bottom:14px">
@@ -27226,7 +27291,7 @@ async function exportarRelatorioComparativoPDF() {
   // cache do navegador. Agora o nome do cache deriva de APP_BUILD, que
   // muda a cada publicação, e o activate do sw.js apaga os caches
   // anteriores sozinho.
-  var APP_BUILD = 'h34';
+  var APP_BUILD = 'h36';
   window.APP_BUILD = APP_BUILD;
 
   function _mostrarBannerAtualizacao(){
