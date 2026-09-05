@@ -10,7 +10,7 @@
 // o mesmo número, exatamente como em produção. A disciplina é a mesma; o que
 // muda é o lugar.
 
-const BUILD    = 'h27';
+const BUILD    = 'h28';
 const CACHE    = 'grid-homolog-' + BUILD;
 const FALLBACK = './app.html';
 
@@ -60,6 +60,41 @@ self.addEventListener('fetch', (event) => {
           return res;
         })
         .catch(() => caches.match(FALLBACK))
+    );
+    return;
+  }
+
+  // ── DEFEITO CORRIGIDO EM 05/09 (h28) ──────────────────────────────────────
+  // A estrategia era cache-first para TUDO. Como os modulos ES sao importados
+  // sem `?v=` (regra do projeto, criada depois do bug do h15), a URL de
+  // `nucleo/dados.js` e a mesma em toda versao — entao, uma vez no cache, o
+  // arquivo ANTIGO era servido para sempre, mesmo com BUILD novo e cache novo:
+  // bastava a pagina pedir o modulo enquanto o service worker antigo ainda
+  // controlava, e a copia velha entrava no cache recem-criado.
+  //
+  // Sintoma real, hoje: o h27 estava publicado, `version.json` e `APP_BUILD`
+  // diziam h27, e `dados.js` executando era o do h26 — a correcao de update
+  // parcial simplesmente nao existia no navegador.
+  //
+  // Codigo do app (JS/CSS) passa a ser NETWORK-FIRST: pega da rede e usa o
+  // cache so quando ela falha. Continua funcionando offline, e nunca mais
+  // mistura versoes. Imagem e fonte seguem cache-first — elas nao mudam sem
+  // mudar de nome.
+  const ehCodigo = /\.(js|css)$/i.test(url.pathname);
+
+  if (ehCodigo) {
+    // `cache: 'reload'` ignora o cache HTTP do proprio navegador. Sem isto, o
+    // network-first ainda podia devolver a copia velha: o GitHub Pages manda
+    // `Cache-Control: max-age=600`, e por 10 minutos o navegador nem pergunta
+    // ao servidor. Sao dois caches em serie, e os dois precisavam ser tratados.
+    event.respondWith(
+      fetch(req, { cache: 'reload' }).then((res) => {
+        if (res && res.ok && res.type === 'basic') {
+          const copia = res.clone();
+          caches.open(CACHE).then((c) => c.put(req, copia)).catch(() => {});
+        }
+        return res;
+      }).catch(() => caches.match(req))
     );
     return;
   }
