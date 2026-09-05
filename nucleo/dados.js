@@ -729,8 +729,16 @@ export async function empresasDoCrm() {
   for (const l of leads) {
     const c = (l.cliente_id && cli.find(x => x.id === l.cliente_id)) || porNome.get(chave(l.empresa));
     if (!c) continue;
-    const r = contagem.get(c.id) || { ...c, negocios: 0, valor: 0 };
-    r.negocios++; r.valor += (l.valor || 0);
+    const r = contagem.get(c.id) || { ...c, negocios: 0, valor: 0, abertos: 0, ganhos: 0, perdidos: 0, ultimo: null };
+    r.negocios++;
+    r.valor += (l.valor || 0);
+    if (estagios.ehAberta(l.estagio))  r.abertos++;
+    if (estagios.ehGanho(l.estagio))   r.ganhos++;
+    if (estagios.ehPerdido(l.estagio)) r.perdidos++;
+    /* "ultimo movimento" e o que responde "faz quanto tempo que ninguem fala
+       com esta empresa?" — a pergunta que decide quem receber ligacao hoje. */
+    const quando = l.parado_desde || l.criado_em;
+    if (quando && (!r.ultimo || new Date(quando) > new Date(r.ultimo))) r.ultimo = quando;
     contagem.set(c.id, r);
   }
   return [...contagem.values()].sort((a, b) => b.valor - a.valor);

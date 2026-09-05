@@ -85,24 +85,108 @@ export async function render(params = {}) {
   </div>`;
 }
 
-/* ── Lista de empresas com movimento ─────────────────────────────────────── */
+/* ── Lista de empresas ─────────────────────────────────────────────────────
+   Uma lista de conta em CRM precisa aguentar centenas de linhas. A primeira
+   versao rolava a pagina inteira e nao tinha busca — util com 7 empresas,
+   inutil com 700. Agora: busca por nome e CNPJ, filtro por situacao, ordenacao
+   por qualquer coluna e paginacao de 25.
+
+   A busca ignora acento e pontuacao dos dois lados: procurar "sao joao" acha
+   "São João", e digitar "44444444" acha "44.444.444/0001-44" — ninguem digita
+   CNPJ com pontuacao para procurar. */
+const chaveBusca = (t) => String(t || '').toLowerCase().normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+
 async function listaDeEmpresas() {
-  const empresas = await dados.empresasDoCrm();
+  const todas = await dados.empresasDoCrm();
+
+  let lista = todas;
+  if (_situacao === 'abertos')  lista = lista.filter(e => e.abertos > 0);
+  if (_situacao === 'clientes') lista = lista.filter(e => e.ganhos > 0);
+  if (_situacao === 'sem-cnpj') lista = lista.filter(e => !e.cnpj);
+  if (_busca) {
+    const t = chaveBusca(_busca);
+    lista = lista.filter(e => chaveBusca(e.nome).includes(t) || chaveBusca(e.cnpj).includes(t)
+                           || chaveBusca(e.cidade).includes(t));
+  }
+
+  const dir = _ordem.desc ? -1 : 1;
+  lista = [...lista].sort((a, b) => {
+    const x = a[_ordem.campo], y = b[_ordem.campo];
+    if (typeof x === 'number' || typeof y === 'number') return ((x || 0) - (y || 0)) * dir;
+    return String(x || '').localeCompare(String(y || ''), 'pt-BR') * dir;
+  });
+
+  const paginas = Math.max(1, Math.ceil(lista.length / POR_PAGINA));
+  const pagina = Math.min(_pagina, paginas);
+  const naPagina = lista.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA);
+
+  const cidades = [...new Set(todas.map(e => e.cidade).filter(Boolean))].sort();
+
   return `
   ${ui.topo({ modulo:'CRM', moduloIcone:'building', titulo:'Empresas',
-    sub:`${empresas.length} com negócio registrado` })}
-  ${empresas.length ? ui.tabela({
+    sub: `${todas.length} ${todas.length === 1 ? 'empresa' : 'empresas'} com negócio registrado`,
+    acoes:[{ rotulo:'Novo negócio', icone:'plus', tipo:'pri', acao:'crm:novo-lead' }] })}
+
+  ${ui.kpis([
+    { rotulo:'Empresas',        icone:'building', valor: todas.length },
+    { rotulo:'Com negócio aberto', icone:'funnel', valor: todas.filter(e => e.abertos > 0).length },
+    { rotulo:'Já compraram',    icone:'check',    valor: todas.filter(e => e.ganhos > 0).length },
+    { rotulo:'Valor em carteira', icone:'trend',  valor: ui.fmt.moeda(todas.reduce((s,e) => s + (e.valor||0), 0)) }
+  ])}
+
+  ${ui.filtros({
+    busca:{ id:'crmBuscaEmpresa', placeholder:'Buscar por nome, CNPJ ou cidade', acao:'crm:buscar-empresa' },
+    selects:[
+      { id:'crmEmpSituacao', acao:'crm:emp-situacao', valor:_situacao, opcoes:[
+        { v:'', r:'Todas as empresas' },
+        { v:'abertos',  r:'Com negócio em aberto' },
+        { v:'clientes', r:'Que já compraram' },
+        { v:'sem-cnpj', r:'Sem CNPJ cadastrado' }
+      ] },
+      { id:'crmEmpCidade', acao:'crm:emp-cidade', valor:_cidade,
+        opcoes:[{ v:'', r:'Todas as cidades' }, ...cidades.map(c => ({ v:c, r:c }))] }
+    ]
+  })}
+
+  ${lista.length ? ui.tabela({
+    ordem: _ordem,
     acaoLinha: (e) => `ir:crm-empresa:${e.id}`,
     colunas:[
       { campo:'nome', rotulo:'Empresa',
-        render:(e) => `<div class="prim">${ui.esc(e.nome)}</div><div class="sub">${e.cnpj ? 'CNPJ ' + ui.esc(e.cnpj) : 'sem CNPJ cadastrado'}</div>` },
-      { campo:'negocios', rotulo:'Negócios', dir:true, render:(e) => String(e.negocios) },
-      { campo:'valor', rotulo:'Valor total', dir:true, render:(e) => `<span class="prim">${ui.fmt.moeda(e.valor)}</span>` }
+        render:(e) => `<div class="prim">${ui.esc(e.nome)}</div>
+          <div class="sub">${e.cnpj ? 'CNPJ ' + ui.esc(e.cnpj) : 'sem CNPJ'}${e.cidade ? ' · ' + ui.esc(e.cidade) : ''}</div>` },
+      { campo:'abertos', rotulo:'Em aberto', dir:true,
+        render:(e) => e.abertos ? `<span class="prim">${e.abertos}</span>` : `<span style="color:var(--text-3)">—</span>` },
+      { campo:'ganhos', rotulo:'Fechados', dir:true,
+        render:(e) => e.ganhos ? ui.selo(String(e.ganhos), 'ok') : `<span style="color:var(--text-3)">—</span>` },
+      { campo:'valor', rotulo:'Valor total', dir:true,
+        render:(e) => `<span class="prim">${ui.fmt.moeda(e.valor)}</span>` },
+      { campo:'ultimo', rotulo:'Último movimento', dir:true,
+        render:(e) => e.ultimo ? ui.fmt.desde(e.ultimo) : '—' }
     ],
-    linhas: empresas,
-    rodape: ui.paginacao({ total: empresas.length, rotulo:'empresas' })
-  }) : ui.vazio({ icone:'building', titulo:'Nenhuma empresa com negócio',
-                  sub:'As empresas aparecem aqui quando um negócio é criado para elas.' })}`;
+    linhas: naPagina,
+    rodape: ui.paginacao({ pagina, paginas, total: lista.length, rotulo:'empresas' })
+  }) : ui.vazio({ icone:'building',
+      titulo: _busca || _situacao || _cidade ? 'Nenhuma empresa encontrada' : 'Nenhuma empresa com negócio',
+      sub: _busca || _situacao || _cidade
+        ? 'Ajuste a busca ou os filtros acima.'
+        : 'As empresas aparecem aqui quando um negócio é criado para elas.' })}`;
+}
+
+/* Estado da lista. Mora no módulo porque a tela é redesenhada inteira a cada
+   ação — sem isto, buscar apagaria a ordenação e vice-versa. */
+const POR_PAGINA = 25;
+let _busca = '', _situacao = '', _cidade = '', _pagina = 1;
+let _ordem = { campo:'valor', desc:true };
+
+export function acao(nome, valor, redesenhar) {
+  if (nome === 'crm:buscar-empresa') { _busca = valor || ''; _pagina = 1; redesenhar(); return true; }
+  if (nome === 'crm:emp-situacao')   { _situacao = valor || ''; _pagina = 1; redesenhar(); return true; }
+  if (nome === 'crm:emp-cidade')     { _cidade = valor || ''; _pagina = 1; redesenhar(); return true; }
+  if (nome === 'pagina')  { _pagina = Number(valor) || 1; redesenhar(); return true; }
+  if (nome === 'ordenar') { _ordem = { campo: valor, desc: !(_ordem.campo === valor && _ordem.desc) }; _pagina = 1; redesenhar(); return true; }
+  return false;
 }
 
 /* ── Pedaços ─────────────────────────────────────────────────────────────── */
