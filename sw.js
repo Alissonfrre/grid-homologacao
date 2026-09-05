@@ -10,7 +10,7 @@
 // o mesmo número, exatamente como em produção. A disciplina é a mesma; o que
 // muda é o lugar.
 
-const BUILD    = 'h19';
+const BUILD    = 'h20';
 const CACHE    = 'grid-homolog-' + BUILD;
 const FALLBACK = './app.html';
 

@@ -3610,12 +3610,23 @@ async function entrarNoApp() {
   // que roda, então a querystring original é guardada aqui antes disso,
   // pra renderConformidade() poder restaurar empresa/colaborador depois.
   const paginaHash = _hashPagina();
-  const paginaInicial = (paginaHash && TITULOS[paginaHash] && _perfilTemAcesso(paginaHash)) ? paginaHash : 'home';
+  // Uma rota de modulo pode nao estar em TITULOS ainda (as ocultas nunca
+  // estarao: ficha do lead, configuracao do funil). Reconhecemos pelo prefixo
+  // do modulo contratado, e quem valida o acesso de verdade e o irPara, depois
+  // de a plataforma carregar.
+  const _pareceRotaDeModulo = (pg) => _modulosAtivos.some(m => pg === m || pg.startsWith(m + '-'));
+  const paginaInicial = (paginaHash && (TITULOS[paginaHash] || _pareceRotaDeModulo(paginaHash))
+                         && (_perfilTemAcesso(paginaHash) || _pareceRotaDeModulo(paginaHash)))
+    ? paginaHash : 'home';
   window._hashInicialQuery = (paginaInicial === paginaHash && location.hash.includes('?'))
     ? location.hash.slice(location.hash.indexOf('?'))
     : null;
   marcaTempo('menu pintado');
-  await irPara(paginaInicial);
+  // Link profundo colado na barra de enderecos: "#crm-lead?id=<uuid>" abre a
+  // ficha daquele lead, e nao a tela generica sem lead selecionado.
+  const _qIni = window._hashInicialQuery ? new URLSearchParams(window._hashInicialQuery.slice(1)) : null;
+  const _idIni = _qIni ? _qIni.get('id') : null;
+  await irPara(paginaInicial, _idIni ? { id: _idIni } : {});
   marcaTempo('tela util');
   _relatorioCarregamento();
   _prefetchLibsPesadasEmSegundoPlano();
@@ -4077,7 +4088,13 @@ async function irPara(pagina, params={}) {
   // Bloqueia navegação para telas fora do menu do perfil atual (ver
   // _perfilTemAcesso acima) — redireciona para o Início em vez de renderizar
   // uma tela sem permissão.
-  if (!_perfilTemAcesso(pagina)) pagina = 'home';
+  if (!_perfilTemAcesso(pagina)) {
+    // Pode ser rota de modulo que ainda nao chegou (os modulos carregam em
+    // segundo plano). Espera o carregamento em andamento antes de decidir que
+    // a pessoa nao tem acesso — senao um link profundo vira sempre 'home'.
+    if (_plataformaCarregando && !_GRID) { try { await _plataformaCarregando; } catch (e) {} }
+    if (!_perfilTemAcesso(pagina)) pagina = 'home';
+  }
   // Agenda da Equipe roda um refresh silencioso em segundo plano (ver
   // renderAgendaEquipe) enquanto a pessoa está nela — ao sair da tela,
   // sempre para esse timer aqui, independente de para onde ela está indo,
@@ -4099,8 +4116,15 @@ async function irPara(pagina, params={}) {
   fabOcultar();
   document.getElementById('headerTitle').textContent = TITULOS[pagina] || pagina;
   if (_suporteAtivo) _suporteRegistrarAcao(pagina); // log de auditoria
-  // Atualiza URL com hash sem recarregar a página
-  const novoHash = '#' + pagina;
+  // Atualiza URL com hash sem recarregar a página.
+  // ── CORRIGIDO EM 05/09 (h20) ──────────────────────────────────────────
+  // O id da rota de modulo (a ficha de um lead) nao ia para a URL: o hash
+  // virava so "#crm-lead". Consequencia: recarregar a pagina em cima de uma
+  // ficha, ou Avancar depois de Voltar, abria "Nenhum lead selecionado".
+  // Turmas ja resolvia isso com "?turma=<id>"; aqui o mesmo padrao, com
+  // "?id=<id>", para qualquer rota de modulo que receba um.
+  const idDaRota = params && params.id ? '?id=' + encodeURIComponent(params.id) : '';
+  const novoHash = '#' + pagina + idDaRota;
   if (location.hash !== novoHash) history.pushState({pagina}, '', novoHash);
   showLoading();
   // O esqueleto vale para a PRIMEIRA pintura de cada tela. Numa troca de tela
@@ -22068,7 +22092,11 @@ window.addEventListener('popstate', async (e) => {
   // segunda condicao, "Voltar" para a ficha de um lead nao redesenhava nada.
   const ehRotaDeModulo = !!(_GRID && _GRID.navegacao && _GRID.navegacao.rota(pagina));
   if ((TITULOS[pagina] || ehRotaDeModulo) && _perfilTemAcesso(pagina) && pagina !== paginaAtual) {
-    await irPara(pagina);
+    // O id volta da propria URL (ver o pushState em irPara) — sem isto,
+    // Avancar para a ficha de um lead abria "Nenhum lead selecionado".
+    const qi = location.hash.indexOf('?');
+    const idDaUrl = qi !== -1 ? new URLSearchParams(location.hash.slice(qi + 1)).get('id') : null;
+    await irPara(pagina, idDaUrl ? { id: idDaUrl } : {});
   }
 });
 
@@ -27197,7 +27225,7 @@ async function exportarRelatorioComparativoPDF() {
   // cache do navegador. Agora o nome do cache deriva de APP_BUILD, que
   // muda a cada publicação, e o activate do sw.js apaga os caches
   // anteriores sozinho.
-  var APP_BUILD = 'h19';
+  var APP_BUILD = 'h20';
   window.APP_BUILD = APP_BUILD;
 
   function _mostrarBannerAtualizacao(){
