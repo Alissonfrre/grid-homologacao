@@ -203,10 +203,12 @@
 .crm-ativ-card:active{cursor:grabbing}
 .crm-ativ-card.feita .crm-ativ-card-t{color:var(--text-3);text-decoration:line-through}
 .crm-ativ-card-top{display:flex;align-items:flex-start;gap:8px}
-.crm-ativ-card-t{font-size:var(--fs-3);font-weight:600;color:var(--text-1);line-height:1.35}
-.crm-ativ-card-s{font-size:var(--fs-2);color:var(--text-3);margin:5px 0 0 30px;line-height:1.5}
+.crm-ativ-card-t{font-size:var(--fs-3);font-weight:600;color:var(--text-1);line-height:1.35;
+  min-width:0;overflow-wrap:anywhere}
+.crm-ativ-card-s{font-size:var(--fs-2);color:var(--text-3);margin:5px 0 0 30px;
+  max-width:calc(100% - 30px);line-height:1.5;overflow-wrap:anywhere}
 .crm-ativ-card-rod{display:flex;align-items:center;justify-content:space-between;gap:8px;
-  margin:9px 0 0 30px;font-size:var(--fs-1);color:var(--text-3)}
+  margin:9px 0 0 30px;max-width:calc(100% - 30px);font-size:var(--fs-1);color:var(--text-3)}
 .crm-ativ-card-rod .q{font-weight:700;font-variant-numeric:tabular-nums}
 
 @media(max-width:767px){.crm-funis-trilho{overflow-x:auto;flex-wrap:nowrap}}
@@ -215,11 +217,20 @@
 /* ── 05/09 (h21) — cartão de atividade completo e linhas clicáveis ────────
    O cartão passou a responder "de que negócio se trata" e "quem pediu": uma
    atividade criada por outra pessoa chegava sem remetente. */
+/* ── CORRIGIDO EM 05/09 (h25) ──────────────────────────────────────────────
+   `margin-left:30px` SOMADO a `max-width:100%` = 30px alem da largura do
+   cartao. A etiqueta do negocio transbordava 17px em todos os cartoes — o
+   Alisson viu na tela o que a minha verificacao por DOM nao pegou, porque eu
+   conferia existencia de elemento e nao geometria. O alinhamento de 30px
+   agora sai do padding do proprio bloco, e a largura maxima desconta.
+   Regra para o proximo: com recuo, a largura maxima e calc(100% - recuo). */
 .crm-ativ-card-alvo{display:flex;align-items:center;gap:6px;margin:6px 0 0 30px;
   font-size:var(--fs-1);font-weight:600;color:var(--text-2);background:var(--gray-50);
-  border-radius:var(--r-sm);padding:3px 7px;width:fit-content;max-width:100%;
+  border-radius:var(--r-sm);padding:3px 7px;width:fit-content;max-width:calc(100% - 30px);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.crm-ativ-card-autor{margin:6px 0 0 30px;font-size:var(--fs-1);color:var(--text-3);font-style:italic}
+.crm-ativ-card-autor{margin:6px 0 0 30px;max-width:calc(100% - 30px);
+  font-size:var(--fs-1);color:var(--text-3);font-style:italic;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .crm-ativ-quem{display:inline-flex;align-items:center;gap:4px;min-width:0;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .crm-ativ-quem.sem{color:var(--atencao-text)}
