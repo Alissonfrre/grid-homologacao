@@ -26,6 +26,14 @@ function explicar(e) {
   if (/row-level security|violates row-level/i.test(m))
     return 'Você não tem permissão para isso — ou o módulo CRM foi desligado para esta organização.';
   if (/duplicate key/i.test(m)) return 'Já existe um registro igual.';
+  /* As CHECK do banco chegam como texto tecnico ("violates check constraint
+     crm_leads_vagas_check"). Traduzimos as que existem hoje; o resto continua
+     aparecendo como veio, porque esconder o erro e pior. */
+  if (/crm_leads_vagas_check/.test(m))   return 'A quantidade precisa ser maior que zero — ou pode ficar em branco.';
+  if (/crm_leads_valor_check/.test(m))   return 'O valor não pode ser negativo.';
+  if (/crm_leads_empresa_check/.test(m)) return 'O nome da empresa precisa ter entre 1 e 160 caracteres.';
+  if (/crm_funil_etapas_funil_id_ordem_key/.test(m))
+    return 'Duas etapas ficaram com a mesma posição. Recarregue a tela e tente reordenar de novo.';
   return m;
 }
 

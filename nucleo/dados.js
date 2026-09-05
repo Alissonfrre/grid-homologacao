@@ -288,7 +288,8 @@ export async function listarFunis() {
   if (_origem !== 'banco') return [];
   let { data, error } = await _sb.from('crm_funis')
     .select('id, nome, padrao, tipo_item').eq('org_id', sessao.orgId())
-    .is('arquivado_em', null).order('padrao', { ascending: false }).order('nome');
+    .eq('ativo', true).is('arquivado_em', null)
+    .order('padrao', { ascending: false }).order('nome');
   if (_semColuna(error)) {
     const r = await _sb.from('crm_funis').select('id, nome, padrao')
       .eq('org_id', sessao.orgId()).order('nome');
@@ -344,12 +345,29 @@ export async function salvarEtapa(form) {
   const linha = {
     org_id: sessao.orgId(), funil_id: form.funil_id,
     nome: (form.nome || '').trim(), tipo: form.tipo || 'aberto',
-    cor: form.cor || null, ordem: form.ordem ?? 99
+    cor: form.cor || null
   };
   if (!linha.nome) throw new Error('Informe o nome da etapa.');
-  /* O slug nunca muda depois de criado: e ele que os leads guardam, e
-     renomear "Proposta" nao pode mover lead nenhum. */
-  if (!form.id) linha.slug = _slug(linha.nome);
+
+  if (form.id) {
+    if (form.ordem != null) linha.ordem = form.ordem;
+  } else {
+    /* Etapa nova entra no fim da fila. A versao anterior usava `ordem: 99`
+       fixo, que colide com a UNIQUE (funil_id, ordem) na segunda etapa criada
+       no mesmo funil. */
+    const { data: irmas } = await _sb.from('crm_funil_etapas')
+      .select('ordem, slug').eq('funil_id', form.funil_id);
+    linha.ordem = Math.max(0, ...(irmas || []).map(e => e.ordem || 0)) + 1;
+    /* O slug nunca muda depois de criado: e ele que os leads guardam, e
+       renomear "Proposta" nao pode mover lead nenhum. Por isso precisa nascer
+       unico dentro do funil — duas etapas "Proposta" gerariam o mesmo
+       identificador, e a tabela nao impede isso. */
+    const usados = new Set((irmas || []).map(e => e.slug));
+    const base = _slug(linha.nome);
+    let tentativa = base, n = 2;
+    while (usados.has(tentativa)) tentativa = `${base}-${n++}`;
+    linha.slug = tentativa;
+  }
   const enviar = (l) => form.id
     ? _sb.from('crm_funil_etapas').update(l).eq('id', form.id).select('id').single()
     : _sb.from('crm_funil_etapas').insert(l).select('id').single();
@@ -363,6 +381,16 @@ export async function salvarEtapa(form) {
 export async function reordenarEtapas(funilId, idsNaOrdem) {
   if (_origem !== 'banco') return _simulado();
 
+  /* `crm_funil_etapas` tem UNIQUE (funil_id, ordem). Regravar 1..N direto colide
+     na primeira troca: mover a etapa 2 para a posicao 1 esbarra na que ainda
+     esta em 1. Duas passadas resolvem — todo mundo vai primeiro para uma ordem
+     negativa, que ninguem ocupa, e depois para a definitiva.
+     Descoberto testando a RLS com o usuario real, antes de a tela ir ao ar. */
+  for (let i = 0; i < idsNaOrdem.length; i++) {
+    const { error } = await _sb.from('crm_funil_etapas')
+      .update({ ordem: -(i + 1) }).eq('id', idsNaOrdem[i]);
+    if (error) throw error;
+  }
   for (let i = 0; i < idsNaOrdem.length; i++) {
     const { error } = await _sb.from('crm_funil_etapas')
       .update({ ordem: i + 1 }).eq('id', idsNaOrdem[i]);

@@ -3589,11 +3589,18 @@ async function entrarNoApp() {
 
   // Em segundo plano: confere o contrato de verdade e carrega os modulos.
   // Sem await — a tela ja esta utilizavel.
-  _iniciarPlataforma().then(() => {
+  // A promessa fica guardada em _plataformaCarregando: quem abrir uma rota de
+  // modulo antes de ela terminar espera aqui, em vez de receber "em breve".
+  _plataformaCarregando = _iniciarPlataforma().then(() => {
     marcaTempo('modulos carregados');
     _injetarMenuDosModulos();
     configurarNavegacao();
     marcarNavAtivo(paginaAtual);
+    // Se a tela aberta agora e de modulo e ficou no "em breve" (link profundo
+    // aberto antes de o modulo chegar), redesenha com a tela de verdade.
+    if (_GRID && paginaAtual && !TITULOS_NATIVOS.has(paginaAtual)) {
+      _GRID.abrir(paginaAtual, window._paramsRotaAtual || {});
+    }
   });
   _sessaoIniciar(); // iniciar monitoramento de inatividade
   // Lê hash da URL para restaurar a página ao fazer login ou recarregar —
@@ -3677,6 +3684,12 @@ const NAV_BOTTOM = {
 // que existe modulo. Se a consulta falhar, `_GRID` fica nulo e o app se
 // comporta exatamente como antes: falha fechada, nao falha aberta.
 let _GRID = null;
+let _plataformaCarregando = null;   // promessa de _iniciarPlataforma (ver irPara)
+/* As telas que o proprio app.html desenha. Serve para saber se a pagina atual
+   e de modulo sem perguntar ao modulo — que pode ainda nao ter carregado. */
+const TITULOS_NATIVOS = new Set(['home','orgs','financeiro','adocao','logs','clientes',
+  'colaboradores','catalogo','conformidade','turmas','agendaequipe','equipe','agenda',
+  'historico','relatorios','conta']);
 let _modulosAtivos = [];
 
 // A lista de modulos contratados muda raramente (uma venda, uma renovacao).
@@ -4080,6 +4093,7 @@ async function irPara(pagina, params={}) {
   // sub-rota. Não afeta nenhuma regra de negócio, só o estado de navegação.
   window._turmaAbertaViaHash = null;
   paginaAtual = pagina;
+  window._paramsRotaAtual = params;
   marcarNavAtivo(pagina);
   fecharSidebar();
   fabOcultar();
@@ -4115,6 +4129,18 @@ async function irPara(pagina, params={}) {
       // ele desenha. Só cai em "em breve" quando ninguem responde.
       // (o despachante de acoes das telas de modulo esta em _ligarAcoesDeModulo)
       default:
+        // ── BUG CORRIGIDO EM 05/09 (h18) ────────────────────────────────
+        // Os modulos carregam em segundo plano (ver a ordem de pintura em
+        // iniciarApp). Abrir o app direto num link profundo de modulo
+        // — "app.html#crm-funil", que e o que um favorito ou um link
+        // compartilhado tem — chegava aqui com _GRID ainda null e caia em
+        // "Esta secao esta sendo construida". Nao era rota inexistente: era
+        // rota que ainda nao tinha chegado.
+        // Agora esperamos o carregamento que ja esta em andamento (no maximo
+        // ~8s) antes de decidir que a rota nao existe.
+        if (!_GRID && _plataformaCarregando) {
+          try { await _plataformaCarregando; } catch (e) { /* segue para o "em breve" */ }
+        }
         if (_GRID && await _GRID.abrir(pagina, params)) break;
         renderEmBreve(TITULOS[pagina]||pagina);
     }
@@ -27175,7 +27201,7 @@ async function exportarRelatorioComparativoPDF() {
   // cache do navegador. Agora o nome do cache deriva de APP_BUILD, que
   // muda a cada publicação, e o activate do sw.js apaga os caches
   // anteriores sozinho.
-  var APP_BUILD = 'h17';
+  var APP_BUILD = 'h18';
   window.APP_BUILD = APP_BUILD;
 
   function _mostrarBannerAtualizacao(){
