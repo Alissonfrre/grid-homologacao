@@ -5350,6 +5350,56 @@ async function alterarPlanoOrg() {
   }
 }
 
+// NIVEL DE ARQUIVO, e nao dentro de renderHomeAdmin. Estava la dentro desde o
+// h36 e passou despercebido enquanto a unica chamada era a da propria tela: a
+// funcao existia so durante aquele desenho. Quando o h40 passou o componente
+// pela ponte e a tela de Turmas comecou a usa-lo, os dois quebraram com
+// "_alertaLista is not defined" — porque nao havia _alertaLista fora dali.
+// Componente compartilhado mora no escopo de quem compartilha.
+// ── Lista "Requer atenção" ────────────────────────────────────────────────
+// Um construtor para as três telas que mostravam alerta. Antes cada uma tinha
+// o seu, escrito com estilo inline, e a mesma decisão visual estava copiada em
+// três lugares — mudar o formato exigia lembrar dos três.
+//
+// Cada item: { grave, n, unidade, texto, acao, acaoHtml, aoClicar, extra }
+//   grave    → filete vermelho e sobe para o topo
+//   n        → o número, quando existe. Sai da frase e vira a primeira coisa
+//              da linha. Alerta sem número (os do Provedor) simplesmente não
+//              o passa, e o texto ocupa o lugar.
+//   unidade  → "turmas", "aulas" — o negrito que acompanha o número
+//   acao     → rótulo do link à direita ("Revisar"); acaoHtml para casos que
+//              já trazem HTML próprio
+//   aoClicar → JS do clique na linha inteira
+//   extra    → HTML solto no fim da linha (o botão de dispensar do Provedor)
+//
+// A ordenação por gravidade é do componente, não de quem chama: é ela que faz
+// a POSIÇÃO comunicar urgência, o que permite o filete ser discreto.
+const _CHEVRON_ALERTA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>';
+function _alertaLista(itens) {
+  if (!itens || !itens.length) return '';
+  const ordenados = [...itens].sort((a, b) => (a.grave ? 0 : 1) - (b.grave ? 0 : 1));
+  /* Se UM item tem numero, todos reservam a coluna — mesmo os que nao tem.
+     Sem isto, um alerta sem numero (o do WhatsApp desconectado, no Painel
+     comercial) comeca colado no filete enquanto os vizinhos comecam 50px
+     adiante, e a coluna que justifica este formato deixa de existir bem na
+     linha mais importante. Lista inteira sem numero nao reserva nada. */
+  const temColuna = ordenados.some((a) => a.n != null);
+  return `<div class="ds-alertas">${ordenados.map((a) => {
+    const corpo = `<div class="tx">${a.unidade ? `<b>${a.unidade}</b> ` : ''}${a.texto}</div>`
+      + (a.sub    ? `<div class="sub">${a.sub}</div>` : '')
+      + (a.abaixo ? `<div class="abaixo">${a.abaixo}</div>` : '');
+    const temBloco = !!(a.sub || a.abaixo);
+    return `
+    <div class="ds-alerta ${a.grave ? 'grave' : ''} ${a.aoClicar ? 'clicavel' : ''} ${temBloco ? 'com-bloco' : ''}"${a.aoClicar ? ` onclick="${a.aoClicar}"` : ''}>
+      <span class="fil"></span>
+      ${temColuna ? `<span class="num">${a.n != null ? a.n : ''}</span>` : ''}
+      ${temBloco ? `<div class="corpo">${corpo}</div>` : corpo}
+      ${a.acaoHtml || (a.acao ? `<span class="ac">${a.acao}${_CHEVRON_ALERTA}</span>` : '')}
+      ${a.extra || ''}
+    </div>`;
+  }).join('')}</div>`;
+}
+
 async function renderHomeAdmin() {
   const oi = usuarioAtual.org_id;
   const hoje = new Date();
@@ -5502,49 +5552,7 @@ async function renderHomeAdmin() {
     });
   }
 
-// ── Lista "Requer atenção" ────────────────────────────────────────────────
-// Um construtor para as três telas que mostravam alerta. Antes cada uma tinha
-// o seu, escrito com estilo inline, e a mesma decisão visual estava copiada em
-// três lugares — mudar o formato exigia lembrar dos três.
-//
-// Cada item: { grave, n, unidade, texto, acao, acaoHtml, aoClicar, extra }
-//   grave    → filete vermelho e sobe para o topo
-//   n        → o número, quando existe. Sai da frase e vira a primeira coisa
-//              da linha. Alerta sem número (os do Provedor) simplesmente não
-//              o passa, e o texto ocupa o lugar.
-//   unidade  → "turmas", "aulas" — o negrito que acompanha o número
-//   acao     → rótulo do link à direita ("Revisar"); acaoHtml para casos que
-//              já trazem HTML próprio
-//   aoClicar → JS do clique na linha inteira
-//   extra    → HTML solto no fim da linha (o botão de dispensar do Provedor)
-//
-// A ordenação por gravidade é do componente, não de quem chama: é ela que faz
-// a POSIÇÃO comunicar urgência, o que permite o filete ser discreto.
-const _CHEVRON_ALERTA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>';
-function _alertaLista(itens) {
-  if (!itens || !itens.length) return '';
-  const ordenados = [...itens].sort((a, b) => (a.grave ? 0 : 1) - (b.grave ? 0 : 1));
-  /* Se UM item tem numero, todos reservam a coluna — mesmo os que nao tem.
-     Sem isto, um alerta sem numero (o do WhatsApp desconectado, no Painel
-     comercial) comeca colado no filete enquanto os vizinhos comecam 50px
-     adiante, e a coluna que justifica este formato deixa de existir bem na
-     linha mais importante. Lista inteira sem numero nao reserva nada. */
-  const temColuna = ordenados.some((a) => a.n != null);
-  return `<div class="ds-alertas">${ordenados.map((a) => {
-    const corpo = `<div class="tx">${a.unidade ? `<b>${a.unidade}</b> ` : ''}${a.texto}</div>`
-      + (a.sub    ? `<div class="sub">${a.sub}</div>` : '')
-      + (a.abaixo ? `<div class="abaixo">${a.abaixo}</div>` : '');
-    const temBloco = !!(a.sub || a.abaixo);
-    return `
-    <div class="ds-alerta ${a.grave ? 'grave' : ''} ${a.aoClicar ? 'clicavel' : ''} ${temBloco ? 'com-bloco' : ''}"${a.aoClicar ? ` onclick="${a.aoClicar}"` : ''}>
-      <span class="fil"></span>
-      ${temColuna ? `<span class="num">${a.n != null ? a.n : ''}</span>` : ''}
-      ${temBloco ? `<div class="corpo">${corpo}</div>` : corpo}
-      ${a.acaoHtml || (a.acao ? `<span class="ac">${a.acao}${_CHEVRON_ALERTA}</span>` : '')}
-      ${a.extra || ''}
-    </div>`;
-  }).join('')}</div>`;
-}
+
 
   const alertasHtml = _alertaLista(alertas.map(a => ({
     grave: a.grave, n: a.n, unidade: a.unidade, texto: a.texto,
@@ -27361,7 +27369,7 @@ async function exportarRelatorioComparativoPDF() {
   // cache do navegador. Agora o nome do cache deriva de APP_BUILD, que
   // muda a cada publicação, e o activate do sw.js apaga os caches
   // anteriores sozinho.
-  var APP_BUILD = 'h40';
+  var APP_BUILD = 'h41';
   window.APP_BUILD = APP_BUILD;
 
   function _mostrarBannerAtualizacao(){
