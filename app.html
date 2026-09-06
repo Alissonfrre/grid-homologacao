@@ -8304,7 +8304,7 @@ async function renderClientes() {
       </select>
     </div>
     ${podeCriar?`<div class="acoes-row">
-      <button class="btn btn-amber" onclick="abrirModalCliente()">${ICONS.userplus} Novo cadastro</button>
+      <button class="btn btn-amber" onclick="abrirModalCliente()">${ICONS.plus} Novo cadastro</button>
       ${_btnAcaoBadge(ICONS.upload,'Importar CSV','abrirModalImportarCSV()')}
       ${_btnAcaoBadge(ICONS.filesheet,'Importar modelo 1',"abrirModalImportacaoSOC('clientes')")}
       ${usuarioAtual.orgSocIntegracaoAtiva ? _btnAcaoBadge(ICONS.search,'Buscar no SOC',"_socWsAbrirModal('clientes')",'var(--green-text)','var(--green)','#fff','var(--green-l)') : ''}
@@ -8785,7 +8785,7 @@ async function renderColaboradores() {
       na tela Clientes — a pedido do Alisson, pra não ter a mesma ação
       "Importar" duplicada com nomes ambíguos em duas telas. Colaboradores
       fica só com o cadastro manual. -->
-      ${podeCriar?`<div class="turmas-filtros-cta"><button class="btn btn-amber" onclick="abrirModalColab()">${ICONS.userplus} Novo cadastro</button></div>`:''}
+      ${podeCriar?`<div class="turmas-filtros-cta"><button class="btn btn-amber" onclick="abrirModalColab()">${ICONS.plus} Novo cadastro</button></div>`:''}
     </div>
     <div class="card" style="padding:0" id="listaColabs">${_renderColabsListaPaginada()}</div>`);
 }
@@ -9131,7 +9131,7 @@ async function renderCatalogo() {
     </div>
     ${podeMgr ? `<div class="acoes-row">
       <button class="btn btn-outline" onclick="carregarCatalogoModeloUI()" title="Adiciona os treinamentos do catálogo modelo que ainda não existem no seu catálogo">${ICONS.book} Catálogo modelo</button>
-      <button class="btn btn-navy" onclick="abrirModalCatalogo()">${ICONS.book} Novo</button>
+      <button class="btn btn-navy" onclick="abrirModalCatalogo()">${ICONS.plus} Novo</button>
     </div>` : ''}
 
     <div class="card" style="padding:0" id="listaCatalogo">${_renderCatalogoListaPaginada()}</div>`);
@@ -9849,7 +9849,7 @@ function _htmlPainelDetalheConf(x, aba) {
   const acoesHtml = !podeGerenciar ? '' : (tratada
     ? `<button class="btn btn-outline" data-action="reabrirPendencia" data-id="${x.id}" style="width:100%;justify-content:center">Reabrir pendência</button>`
     : `<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px">
-        ${x.sugestaoId ? `<button class="btn btn-amber" data-action="agendarReciclagem" data-id="${x.id}" style="justify-content:center">${ICONS.clipboard} Criar nova turma</button>
+        ${x.sugestaoId ? `<button class="btn btn-amber" data-action="agendarReciclagem" data-id="${x.id}" style="justify-content:center">${ICONS.plus} Criar nova turma</button>
         <button class="btn btn-outline" data-action="adicionarEmTurmaExistente" data-id="${x.id}" style="justify-content:center">Adicionar em turma existente</button>` : ''}
         <button class="btn btn-outline" data-action="abrirTreinoExternoConf" data-id="${x.id}" style="justify-content:center">Registrar treinamento externo</button>
       </div>
@@ -10722,7 +10722,7 @@ async function renderTurmas(abaInicial) {
       <!-- 2026-08-30: "Nova turma" volta pra esta linha. Na build 150 ele tinha
            ficado sozinho numa faixa própria (~50px) porque as abas saíram e
            não sobrou mais nada ao lado dele. -->
-      ${podeCriar?`<button class="btn btn-amber" onclick="abrirModalTurma()" style="flex-shrink:0">${ICONS.clipboard} Nova turma</button>`:''}
+      ${podeCriar?`<button class="btn btn-amber" onclick="abrirModalTurma()" style="flex-shrink:0">${ICONS.plus} Nova turma</button>`:''}
     </div>
     <div id="turmasCorpoEl">${_turmasPainelHtml()}${_turmasResumoHtml()}${_turmasFaixaPendHtml()}${_turmasRenderVisao(_turmasCache, abaAtiva, podeCriar)}</div>`);
   _turmasAtualizarBotoesVisao();
@@ -12668,7 +12668,7 @@ async function abrirModalTurma(id=null, preSel=null) {
             <div class="field">
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
                 <label style="margin:0">Cliente *</label>
-                ${podeCriarCliente?`<button type="button" class="btn btn-ghost btn-sm" style="padding:3px 8px;font-size:11px;color:var(--amber-h);border:1px solid var(--border)" onclick="abrirModalClienteRapido()">${ICONS.userplus} Novo cliente</button>`:''}
+                ${podeCriarCliente?`<button type="button" class="btn btn-ghost btn-sm" style="padding:3px 8px;font-size:11px;color:var(--amber-h);border:1px solid var(--border)" onclick="abrirModalClienteRapido()">${ICONS.plus} Novo cliente</button>`:''}
               </div>
               ${_comboBuscavelHtml('mTurCli', 'Buscar cliente por nome...', cliOpcoes, cliPreId, travado)}
             </div>
@@ -19753,9 +19753,9 @@ function _renderRelatorioView() {
           <div class="rel2-sub" id="relSubtitle">Últimos ${meses} meses · Atualizado agora</div>
         </div>
         <div class="rel2-export" style="flex-shrink:0">
-          <button class="rel2-export-btn" onclick="exportarRelatorioCSV()"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><path d="M12 3v12m0 0 4.5-4.5M12 15l-4.5-4.5M4 20h16"/></svg> CSV</button>
+          <button class="rel2-export-btn" onclick="exportarRelatorioCSV()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg> CSV</button>
           ${planoAtinge('pro')
-            ? '<button class="rel2-export-btn" onclick="exportarRelatorioExecutivoPDF()"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><path d="M12 3v12m0 0 4.5-4.5M12 15l-4.5-4.5M4 20h16"/></svg> PDF Executivo</button><button class="rel2-export-btn" onclick="exportarRelatorioComparativoPDF()" id="btnExportComp" style="display:' + (meses>1?'inline-block':'none') + '"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><path d="M12 3v12m0 0 4.5-4.5M12 15l-4.5-4.5M4 20h16"/></svg> PDF Comparativo</button>'
+            ? '<button class="rel2-export-btn" onclick="exportarRelatorioExecutivoPDF()"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8"/></svg> PDF Executivo</button><button class="rel2-export-btn" onclick="exportarRelatorioComparativoPDF()" id="btnExportComp" style="display:' + (meses>1?'inline-block':'none') + '"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8"/></svg> PDF Comparativo</button>'
             : '<button class="rel2-export-btn" style="opacity:.5" onclick="modalUpgrade(&quot;Relatório Executivo em PDF&quot;,&quot;pro&quot;)" title="Disponível no plano Pro"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> PDF Executivo</button><button class="rel2-export-btn" style="opacity:.5;' + (meses>1?'':'display:none') + '" onclick="modalUpgrade(&quot;Relatório Comparativo em PDF&quot;,&quot;pro&quot;)" id="btnExportComp" title="Disponível no plano Pro"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> PDF Comparativo</button>'
           }
         </div>
@@ -20374,9 +20374,9 @@ function _renderRelatorioInstrutorDetalhe() {
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
             <button class="btn btn-outline btn-sm" onclick="window.print()">Imprimir</button>
-            <button class="btn btn-sm" style="background:var(--navy);color:#fff" onclick="exportarRelatorioInstrutorCSV('${instrutorId}')"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><path d="M12 3v12m0 0 4.5-4.5M12 15l-4.5-4.5M4 20h16"/></svg> CSV</button>
+            <button class="btn btn-sm" style="background:var(--navy);color:#fff" onclick="exportarRelatorioInstrutorCSV('${instrutorId}')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg> CSV</button>
             ${planoAtinge('pro')
-              ? `<button class="btn btn-sm" style="background:var(--amber);color:var(--navy)" onclick="exportarRelatorioInstrutorPDF('${instrutorId}')"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><path d="M12 3v12m0 0 4.5-4.5M12 15l-4.5-4.5M4 20h16"/></svg> PDF</button>`
+              ? `<button class="btn btn-sm" style="background:var(--amber);color:var(--navy)" onclick="exportarRelatorioInstrutorPDF('${instrutorId}')"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8"/></svg> PDF</button>`
               : `<button class="btn btn-sm" style="opacity:.5" onclick="modalUpgrade('PDF do instrutor','pro')"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> PDF</button>`}
           </div>
         </div>
@@ -27400,7 +27400,7 @@ async function exportarRelatorioComparativoPDF() {
   // cache do navegador. Agora o nome do cache deriva de APP_BUILD, que
   // muda a cada publicação, e o activate do sw.js apaga os caches
   // anteriores sozinho.
-  var APP_BUILD = 'h45';
+  var APP_BUILD = 'h46';
   window.APP_BUILD = APP_BUILD;
 
   function _mostrarBannerAtualizacao(){
