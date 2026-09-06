@@ -83,7 +83,7 @@ export async function render(params = {}) {
           Este negócio está ganho. A turma <b>não</b> é criada pelo CRM — quem monta é o operador,
           em Turmas, com instrutor, datas e participantes.</div>
         <button class="ds-btn sec" style="width:100%;justify-content:center" data-acao="ir:turmas">
-          ${icone('clip','sm')} Abrir Turmas</button>`) : ''}
+          ${icone('clipboard','sm')} Abrir Turmas</button>`) : ''}
 
       ${trein ? ui.cartao(`<div class="ds-card-titulo" style="margin-bottom:10px">No módulo de Treinamentos</div>
         <div class="crm-ctx-cross"><div class="t">${icone('cap','sm')} Já é cliente cadastrado</div>

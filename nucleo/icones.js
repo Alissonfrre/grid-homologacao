@@ -12,7 +12,13 @@ const svg=p=>`<svg viewBox="0 0 24 24" aria-hidden="true">${p}</svg>`;
 export const ICO = {
   home:svg(`<path ${S} d="m3 10 9-7 9 7v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path ${S} d="M9 22V12h6v10"/>`),
   calendar:svg(`<rect ${S} x="3" y="5" width="18" height="16" rx="2"/><path ${S} d="M16 3v4M8 3v4M3 11h18"/>`),
-  building:svg(`<path ${S} d="M3 21h18M5 21V5a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v16M14 9h4a1 1 0 0 1 1 1v11M8 8h3M8 12h3M8 16h3"/>`),
+  /* bloco simples — o mesmo desenho do ICONS do app. O predio com janelas
+     e o `company`, logo abaixo. */
+  building:svg(`<rect ${S} x="2" y="7" width="20" height="14" rx="2"/><path ${S} d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/>`),
+  /* `company` e o predio com janelas; `building` e o bloco simples. Duas
+     telas falam de empresa — Clientes (treinamento) e Empresas (CRM) — e
+     no mesmo menu elas nao podem ter o mesmo desenho. */
+  company:svg(`<path ${S} d="M3 21h18M5 21V5a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v16M14 9h4a1 1 0 0 1 1 1v11M8 8h3M8 12h3M8 16h3"/>`),
   users:svg(`<path ${S} d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle ${S} cx="9.5" cy="7" r="4"/><path ${S} d="M22 21v-2a4 4 0 0 0-3-3.87"/>`),
   user:svg(`<path ${S} d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle ${S} cx="12" cy="7" r="4"/>`),
   book:svg(`<path ${S} d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path ${S} d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>`),
@@ -35,6 +41,9 @@ export const ICO = {
   chevronright:svg(`<path ${S} d="m9 6 6 6-6 6"/>`),
   chevrondown:svg(`<path ${S} d="m6 9 6 6 6-6"/>`),
   back:svg(`<path ${S} d="M19 12H5M12 19l-7-7 7-7"/>`),
+  /* prancheta (turma, protocolo) — nao confundir com `clip`, o clipe de
+     papel usado em anexo. Ver o comentario gemeo no ICONS do app.html. */
+  clipboard:svg(`<path ${S} d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect ${S} x="8" y="2" width="8" height="4" rx="1"/>`),
   clip:svg(`<path ${S} d="M21.4 11.1 12.3 20a5.5 5.5 0 0 1-7.8-7.8l9.2-9.1a3.7 3.7 0 0 1 5.2 5.2l-9.2 9.1a1.8 1.8 0 0 1-2.6-2.6l8.5-8.4"/>`),
   send:svg(`<path ${S} d="M4 12 21 4l-8 17-2.5-6.5L4 12Z"/>`),
   qr:svg(`<rect ${S} x="3" y="3" width="7" height="7" rx="1"/><rect ${S} x="14" y="3" width="7" height="7" rx="1"/><rect ${S} x="3" y="14" width="7" height="7" rx="1"/><path ${S} d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20h1"/>`),

@@ -17,7 +17,7 @@ import { rotuloEstagio, etapa, ehGanho, ehAberta } from '../../nucleo/estagios.j
 export async function render(params = {}) {
   if (dados.ehExemplo()) {
     return `${ui.topo({ voltar:{ rotulo:'Funil de vendas', acao:'ir:crm-funil' }, titulo:'Empresas' })}
-      ${ui.vazio({ icone:'building', titulo:'Disponível com o banco ligado',
+      ${ui.vazio({ icone:'company', titulo:'Disponível com o banco ligado',
         sub:'A ficha da empresa reúne negócios, contatos e atividades da conta — precisa dos dados reais.' })}`;
   }
 
@@ -78,7 +78,7 @@ export async function render(params = {}) {
             </div></div>`).join('')
           : ui.vazio({ icone:'user', titulo:'Nenhuma pessoa cadastrada' })), { plano:true })}
 
-      ${cliente.naoCadastrada ? ui.aviso({ tipo:'info', icone:'building',
+      ${cliente.naoCadastrada ? ui.aviso({ tipo:'info', icone:'company',
           titulo:'Empresa ainda não cadastrada em Clientes',
           texto:'O histórico comercial aparece aqui pelo nome. O cadastro é feito em Clientes, no Treinamentos — o CRM não cria empresa sozinho.' }) : ''}
 
@@ -143,7 +143,7 @@ async function listaDeEmpresas() {
     acoes:[{ rotulo:'Novo negócio', icone:'plus', tipo:'pri', acao:'crm:novo-lead' }] })}
 
   ${ui.kpis([
-    { rotulo:'Empresas',        icone:'building', valor: todas.length },
+    { rotulo:'Empresas',        icone:'company', valor: todas.length },
     { rotulo:'Com negócio aberto', icone:'funnel', valor: todas.filter(e => e.abertos > 0).length },
     { rotulo:'Já compraram',    icone:'check',    valor: todas.filter(e => e.ganhos > 0).length },
     { rotulo:'Valor em carteira', icone:'trend',  valor: ui.fmt.moeda(todas.reduce((s,e) => s + (e.valor||0), 0)) }
@@ -188,7 +188,7 @@ async function listaDeEmpresas() {
     ],
     linhas: naPagina,
     rodape: ui.paginacao({ pagina, paginas, total: lista.length, porPagina: POR_PAGINA, rotulo:'empresas' })
-  }) : ui.vazio({ icone:'building',
+  }) : ui.vazio({ icone:'company',
       titulo: _busca || _situacao || _cidade ? 'Nenhuma empresa encontrada' : 'Nenhuma empresa com negócio',
       sub: _busca || _situacao || _cidade
         ? 'Ajuste a busca ou os filtros acima.'

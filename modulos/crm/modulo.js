@@ -47,7 +47,7 @@ export default {
       alternativa:{ rotulo:'Ver status dos números', acao:'ir:crm-numeros-status' },
       rota:() => import('./numeros.js') },
 
-    { id:'crm-empresa',     rotulo:'Empresas', icone:'building',
+    { id:'crm-empresa',     rotulo:'Empresas', icone:'company',
       perfis:['administrador','comercial'], mobile:true,
       rota:() => import('./empresa.js') },
 
