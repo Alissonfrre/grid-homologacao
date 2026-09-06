@@ -125,12 +125,16 @@ export const telaAberta = () => _telaAberta;
    ponto que sabe exatamente quando o DOM novo entrou.
 
    Vale para qualquer controle com id, nao so a busca. */
+const _EH_TEXTO = (el) => el.tagName === 'TEXTAREA' ||
+  (el.tagName === 'INPUT' && /^(text|search|email|tel|url|password)$/.test(el.type));
+
 function _guardarFoco() {
   const el = typeof document !== 'undefined' ? document.activeElement : null;
   if (!el || !el.id || !/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return null;
   let pos = null;
   try { pos = el.selectionStart; } catch (e) { /* number/email nao tem selecao */ }
-  return { id: el.id, pos };
+  /* Guarda tambem o TEXTO, e nao so a posicao — ver _devolverFoco. */
+  return { id: el.id, pos, texto: _EH_TEXTO(el) ? el.value : null };
 }
 function _devolverFoco(g) {
   if (!g) return;
@@ -138,8 +142,24 @@ function _devolverFoco(g) {
      devolver o foco para o invisivel e o mesmo que perde-lo. */
   const alvo = [...document.querySelectorAll(`[id="${CSS.escape(g.id)}"]`)]
     .find((c) => c.getBoundingClientRect().width > 0);
-  if (!alvo || alvo === document.activeElement) return;
-  alvo.focus();
+  if (!alvo) return;
+
+  /* ── O TEXTO tambem precisa atravessar (05/09, h38) ────────────────────
+     Devolver so o foco nao bastava. A tela e desenhada a partir do ESTADO
+     (`value="${_busca}"`), e a busca tem 250ms de espera: enquanto o
+     redesenho da letra anterior esta a caminho, a pessoa ja digitou mais.
+     Quando ele chega, escreve o valor ANTIGO por cima do campo e apaga o que
+     foi digitado no meio-tempo.
+
+     Nao e teoria: digitando "ceram" numa cadencia normal, o campo terminava
+     com "cmr". Letras somem e trocam de lugar, porque cada redesenho volta o
+     campo alguns caracteres atras.
+
+     Entao o que a pessoa digitou vence o que o estado sabia — para campos de
+     texto. Um `select` fica de fora de proposito: ali o estado e a verdade, e
+     e o proprio redesenho que corrige a opcao escolhida. */
+  if (g.texto != null && _EH_TEXTO(alvo) && alvo.value !== g.texto) alvo.value = g.texto;
+  if (alvo !== document.activeElement) alvo.focus();
   if (g.pos != null) { try { alvo.setSelectionRange(g.pos, g.pos); } catch (e) { /* idem */ } }
 }
 

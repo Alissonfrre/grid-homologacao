@@ -3876,8 +3876,17 @@ function _ligarAcoesDeModulo() {
     const acao = el.dataset.acao;
     if (!acao) return;
     clearTimeout(_tBusca);
-    const valor = el.value;
-    _tBusca = setTimeout(() => { _GRID.tratarAcao(acao + ':' + valor); }, 250);
+    /* Le o campo na HORA DE DISPARAR, nao na hora da tecla: entre uma coisa e
+       outra o redesenho pode ter trocado o elemento, e o que vale e o que esta
+       escrito na tela agora. */
+    const id = el.id, valorDaTecla = el.value;
+    _tBusca = setTimeout(() => {
+      const atual = id
+        ? [...document.querySelectorAll('[id="' + CSS.escape(id) + '"]')]
+            .find((c) => c.getBoundingClientRect().width > 0)
+        : null;
+      _GRID.tratarAcao(acao + ':' + (atual ? atual.value : valorDaTecla));
+    }, 250);
   });
 }
 
@@ -27280,7 +27289,7 @@ async function exportarRelatorioComparativoPDF() {
   // cache do navegador. Agora o nome do cache deriva de APP_BUILD, que
   // muda a cada publicação, e o activate do sw.js apaga os caches
   // anteriores sozinho.
-  var APP_BUILD = 'h37';
+  var APP_BUILD = 'h38';
   window.APP_BUILD = APP_BUILD;
 
   function _mostrarBannerAtualizacao(){
