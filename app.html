@@ -5367,7 +5367,12 @@ async function alterarPlanoOrg() {
 //   unidade  → "turmas", "aulas" — o negrito que acompanha o número
 //   acao     → rótulo do link à direita ("Revisar"); acaoHtml para casos que
 //              já trazem HTML próprio
-//   aoClicar → JS do clique na linha inteira
+//   aoClicar → JS do clique na linha inteira (a casca escreve codigo)
+//   acaoDeclarada → acao de MODULO ("ir:crm-funil"), vira data-acao e o
+//              despachante trata. Sao coisas diferentes: no h42 o painel
+//              passava "ir:crm-conversas" em aoClicar e virava
+//              onclick="ir:crm-conversas", que nao e JavaScript — o clique
+//              morria com "crm is not defined". Um campo, dois contratos.
 //   extra    → HTML solto no fim da linha (o botão de dispensar do Provedor)
 //
 // A ordenação por gravidade é do componente, não de quem chama: é ela que faz
@@ -5387,8 +5392,11 @@ function _alertaLista(itens) {
       + (a.sub    ? `<div class="sub">${a.sub}</div>` : '')
       + (a.abaixo ? `<div class="abaixo">${a.abaixo}</div>` : '');
     const temBloco = !!(a.sub || a.abaixo);
+    const clicavel = a.aoClicar || a.acaoDeclarada;
+    const gatilho = a.aoClicar ? ` onclick="${a.aoClicar}"`
+                  : a.acaoDeclarada ? ` data-acao="${a.acaoDeclarada}"` : '';
     return `
-    <div class="ds-alerta ${a.grave ? 'grave' : ''} ${a.aoClicar ? 'clicavel' : ''} ${temBloco ? 'com-bloco' : ''}"${a.aoClicar ? ` onclick="${a.aoClicar}"` : ''}>
+    <div class="ds-alerta ${a.grave ? 'grave' : ''} ${clicavel ? 'clicavel' : ''} ${temBloco ? 'com-bloco' : ''}"${gatilho}>
       <span class="fil"></span>
       ${temColuna ? `<span class="num">${a.n != null ? a.n : ''}</span>` : ''}
       ${temBloco ? `<div class="corpo">${corpo}</div>` : corpo}
@@ -27367,7 +27375,7 @@ async function exportarRelatorioComparativoPDF() {
   // cache do navegador. Agora o nome do cache deriva de APP_BUILD, que
   // muda a cada publicação, e o activate do sw.js apaga os caches
   // anteriores sozinho.
-  var APP_BUILD = 'h42';
+  var APP_BUILD = 'h43';
   window.APP_BUILD = APP_BUILD;
 
   function _mostrarBannerAtualizacao(){

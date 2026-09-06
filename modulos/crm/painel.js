@@ -83,7 +83,7 @@ export async function render() {
       texto: 'sem resposta',
       sub: aguardando.slice(0, 3).map(c => ui.esc(c.nome)).join(' · ')
            + (aguardando.length > 3 ? ` · e mais ${aguardando.length - 3}` : ''),
-      acao: 'Abrir', aoClicar: 'ir:crm-conversas'
+      acao: 'Abrir', acaoDeclarada: 'ir:crm-conversas'
     }] : []),
     ...(parados.length ? [{
       n: parados.length,
@@ -95,7 +95,7 @@ export async function render() {
       sub: [...parados].sort((a, b) => (b.valor || 0) - (a.valor || 0)).slice(0, 3)
              .map(l => `${ui.esc(l.empresa)} (${ui.fmt.moeda(l.valor)})`).join(' · ')
            + (parados.length > 3 ? ` · e mais ${parados.length - 3}` : ''),
-      acao: 'Ver no funil', aoClicar: 'ir:crm-funil'
+      acao: 'Ver no funil', acaoDeclarada: 'ir:crm-funil'
     }] : []),
     /* Numero desconectado e o unico GRAVE do painel: enquanto durar, mensagem
        de cliente nao chega em ninguem. */
@@ -103,7 +103,7 @@ export async function render() {
       grave: true,
       texto: `Número do <b>${ui.esc(c.nome)}</b> desconectado desde ${ui.esc(c.desde || 'hoje')}`,
       sub: 'As mensagens continuam sendo recebidas e entram na caixa ao reconectar',
-      acao: 'Reconectar', aoClicar: `crm:reconectar:${c.id}`
+      acao: 'Reconectar', acaoDeclarada: `crm:reconectar:${c.id}`
     }))
   ])}
 

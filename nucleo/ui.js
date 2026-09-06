@@ -141,7 +141,9 @@ export function aviso({ tipo = 'atencao', icone: ic, titulo, texto, acao }) {
    A copia local existe so para o demo.html, que roda as telas fora do app e
    nao tem ponte. Se as duas divergirem, quem vale e a do app.html.
 
-   Item: { grave, n, unidade, texto, sub, abaixo, acao, acaoHtml, aoClicar, extra } */
+   Item: { grave, n, unidade, texto, sub, abaixo, acao, acaoHtml, extra } mais UM
+   dos dois cliques: `acaoDeclarada` ("ir:crm-funil", o jeito do modulo) ou
+   `aoClicar` (JS puro, o jeito da casca). Modulo usa sempre acaoDeclarada. */
 export function alertas(itens) {
   const ponte = typeof window !== 'undefined' && window.__GRID_PONTE;
   if (ponte && typeof ponte.alertas === 'function') return ponte.alertas(itens);
@@ -156,7 +158,8 @@ export function alertas(itens) {
       + (a.abaixo ? `<div class="abaixo">${a.abaixo}</div>` : '');
     const temBloco = !!(a.sub || a.abaixo);
     return `
-    <div class="ds-alerta ${a.grave ? 'grave' : ''} ${a.aoClicar ? 'clicavel' : ''} ${temBloco ? 'com-bloco' : ''}"${a.aoClicar ? ` data-acao="${esc(a.aoClicar)}"` : ''}>
+    <div class="ds-alerta ${a.grave ? 'grave' : ''} ${(a.aoClicar || a.acaoDeclarada) ? 'clicavel' : ''} ${temBloco ? 'com-bloco' : ''}"${
+      a.aoClicar ? ` onclick="${a.aoClicar}"` : a.acaoDeclarada ? ` data-acao="${esc(a.acaoDeclarada)}"` : ''}>
       <span class="fil"></span>
       ${temColuna ? `<span class="num">${a.n != null ? esc(a.n) : ''}</span>` : ''}
       ${temBloco ? `<div class="corpo">${corpo}</div>` : corpo}
