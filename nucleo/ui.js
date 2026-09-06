@@ -132,6 +132,40 @@ export function aviso({ tipo = 'atencao', icone: ic, titulo, texto, acao }) {
   </div>`;
 }
 
+/* ── Lista "Requer atenção" ─────────────────────────────────────────────────
+   O MESMO componente da tela Início. Ele nao e reimplementado aqui: a casca
+   passa o construtor pela ponte (`GRID.ponte.alertas`), porque o CSS e o HTML
+   moram no app.html — a tela Inicio precisa deles mesmo sem modulo contratado,
+   e o `design-system-aditivo.css` so e baixado quando ha modulo.
+
+   A copia local existe so para o demo.html, que roda as telas fora do app e
+   nao tem ponte. Se as duas divergirem, quem vale e a do app.html.
+
+   Item: { grave, n, unidade, texto, sub, abaixo, acao, acaoHtml, aoClicar, extra } */
+export function alertas(itens) {
+  const ponte = typeof window !== 'undefined' && window.__GRID_PONTE;
+  if (ponte && typeof ponte.alertas === 'function') return ponte.alertas(itens);
+
+  if (!itens || !itens.length) return '';
+  const ordenados = [...itens].sort((a, b) => (a.grave ? 0 : 1) - (b.grave ? 0 : 1));
+  const temColuna = ordenados.some((a) => a.n != null);
+  const chev = icone('chevronright', 'sm');
+  return `<div class="ds-alertas">${ordenados.map((a) => {
+    const corpo = `<div class="tx">${a.unidade ? `<b>${esc(a.unidade)}</b> ` : ''}${a.texto}</div>`
+      + (a.sub    ? `<div class="sub">${a.sub}</div>` : '')
+      + (a.abaixo ? `<div class="abaixo">${a.abaixo}</div>` : '');
+    const temBloco = !!(a.sub || a.abaixo);
+    return `
+    <div class="ds-alerta ${a.grave ? 'grave' : ''} ${a.aoClicar ? 'clicavel' : ''} ${temBloco ? 'com-bloco' : ''}"${a.aoClicar ? ` data-acao="${esc(a.aoClicar)}"` : ''}>
+      <span class="fil"></span>
+      ${temColuna ? `<span class="num">${a.n != null ? esc(a.n) : ''}</span>` : ''}
+      ${temBloco ? `<div class="corpo">${corpo}</div>` : corpo}
+      ${a.acaoHtml || (a.acao ? `<span class="ac">${esc(a.acao)}${chev}</span>` : '')}
+      ${a.extra || ''}
+    </div>`;
+  }).join('')}</div>`;
+}
+
 /* ── Selo de estado ─────────────────────────────────────────────────────── */
 export const selo = (rotulo, tipo = 'neutro', ponto = false) =>
   `<span class="ds-selo ${tipo}">${ponto ? '<i class="ponto"></i>' : ''}${esc(rotulo)}</span>`;

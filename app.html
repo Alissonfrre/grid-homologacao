@@ -548,6 +548,55 @@ body.modo-suporte-ativo .sino-painel{top:calc(60px + var(--suporte-h,34px))}
 .home-qa{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:14px;min-width:0}
 /* ── Home v2 (Alternativa 1, 2026-08-15) + cabeçalhos de seção ponto+linha.
    Medidas idênticas ao padrão aprovado em Turmas (.turmas-kpi / mockups). ── */
+/* ══ Lista "Requer atenção" ════════════════════════════════════════════════
+   MORA AQUI, e nao em nucleo/design-system-aditivo.css, de proposito: aquele
+   arquivo so e baixado quando a organizacao tem modulo contratado
+   (ver _iniciarPlataforma), e a tela Inicio usa este componente mesmo sem CRM
+   nenhum. Estava no aditivo desde o h36 — teria ido para producao com o CRM
+   desligado e os alertas do Inicio sairiam sem estilo. ══════════════════ */
+/* ── Lista "Requer atenção" (05/09, h36) ───────────────────────────────────
+   Substitui o alerta de caixa tinta que existia inline em três telas. O que
+   estava errado ali não era contraste — o texto media 6,66:1 — era hierarquia:
+   fundo, borda, ícone, texto e botão tinham TODOS a mesma cor, então nada se
+   destacava de nada, e quatro caixas empilhadas viravam uma mancha só.
+
+   Agora a cor aparece uma vez por linha, num filete de 3px, e o resto é
+   neutro. O número sai do meio da frase e vira a primeira coisa da linha —
+   ele é o dado, a frase é só o contexto.
+
+   A ordem é por gravidade (ver _alertaLista em app.html): com o grave sempre
+   no topo, a POSIÇÃO já diz o que é urgente, e o filete não precisa gritar. */
+.ds-alertas{margin-bottom:14px}
+.ds-alerta{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  padding:10px 14px 10px 12px;background:var(--surface);
+  border:1px solid var(--border);border-radius:10px;margin-bottom:5px}
+.ds-alerta:last-child{margin-bottom:0}
+.ds-alerta.clicavel{cursor:pointer;transition:border-color .12s,background .12s}
+.ds-alerta.clicavel:hover{border-color:var(--border-2);background:var(--gray-50)}
+/* align-self:stretch faz o filete acompanhar a altura da linha — inclusive
+   quando o texto quebra em duas linhas no celular. */
+.ds-alerta .fil{width:3px;align-self:stretch;min-height:20px;border-radius:3px;
+  flex-shrink:0;background:var(--amber)}
+.ds-alerta.grave .fil{background:var(--red)}
+.ds-alerta .num{font-size:19px;font-weight:800;letter-spacing:-.7px;
+  /* 38px cabe tres digitos: e o que mantem os numeros numa coluna de verdade.
+     Medido — com 22px, "12" empurrava a frase 3px para a direita e o alinhamento
+     que justifica esta opcao se desfazia justamente quando o numero cresce. */
+  font-variant-numeric:tabular-nums;min-width:38px;text-align:right;
+  line-height:1.15;flex-shrink:0;color:var(--text-1)}
+.ds-alerta .tx{flex:1;min-width:150px;font-size:12.5px;line-height:1.45;color:var(--text-2)}
+.ds-alerta .tx b{font-weight:700;color:var(--text-1)}
+.ds-alerta .ac{display:inline-flex;align-items:center;gap:2px;font-size:11.5px;
+  font-weight:600;color:var(--text-2);white-space:nowrap;
+  background:transparent;border:0;padding:0;font-family:inherit;cursor:pointer}
+.ds-alerta .ac svg{width:13px;height:13px;color:var(--text-3);flex-shrink:0}
+/* Bloco proprio embaixo do texto — os chips de pendencia da tela Turmas.
+   Ocupa a linha inteira; por isso a linha vira coluna quando ele existe. */
+.ds-alerta.com-bloco{align-items:flex-start;flex-wrap:nowrap}
+.ds-alerta .corpo{flex:1;min-width:0}
+.ds-alerta .corpo .abaixo{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}
+.ds-alerta .sub{font-size:11.5px;color:var(--text-3);margin-top:2px}
+
 .gh-sec{display:flex;align-items:center;gap:8px;margin:16px 0 10px}
 .gh-sec .dot{width:7px;height:7px;border-radius:50%;background:var(--amber);flex-shrink:0}
 .gh-sec .dot.red{background:var(--red)}
@@ -960,10 +1009,15 @@ body.modo-suporte-ativo .sino-painel{top:calc(60px + var(--suporte-h,34px))}
 .turmas-faixa-pend .tfx-tx{flex:1;min-width:200px}
 .turmas-faixa-pend .t1{font-size:13.5px;font-weight:700;color:var(--atencao-text);line-height:1.4}
 .turmas-faixa-pend .t2{font-size:12px;color:var(--atencao-text);opacity:.85;margin-top:2px}
-.turmas-faixa-pend .tfx-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
-.turmas-faixa-pend .tfx-chip{font-family:inherit;font-size:11.5px;font-weight:700;padding:5px 11px;border-radius:999px;border:1px solid rgba(180,83,9,.35);background:rgba(255,255,255,.6);color:var(--atencao-text);cursor:pointer;white-space:nowrap}
-.turmas-faixa-pend .tfx-chip:hover{background:#fff}
-.turmas-faixa-pend .tfx-chip.on{background:var(--atencao-text);border-color:var(--atencao-text);color:#fff}
+.turmas-faixa-pend .tfx-chips{display:flex;gap:6px;flex-wrap:wrap}
+.turmas-faixa-pend /* Os chips nasceram sobre a faixa tinta: borda ambar e fundo branco a 60%.
+   Com a faixa virando cartao branco (h40), esse fundo sumia contra a base e
+   a borda ambar ficava sendo a unica cor da linha — competindo com o filete,
+   que e quem deve marcar a gravidade. Agora sao neutros; o selecionado e que
+   ganha peso, porque ali a cor significa "este filtro esta ligado". */
+.tfx-chip{font-family:inherit;font-size:11.5px;font-weight:700;padding:5px 11px;border-radius:999px;border:1px solid var(--border-2);background:var(--surface);color:var(--text-2);cursor:pointer;white-space:nowrap}
+.turmas-faixa-pend .tfx-chip:hover{background:var(--gray-50);border-color:var(--text-3)}
+.turmas-faixa-pend .tfx-chip.on{background:var(--navy);border-color:var(--navy);color:#fff}
 .turmas-faixa-pend .tfx-chip .n{opacity:.7;font-weight:800;margin-left:4px}
 .turmas-faixa-pend .tfx-chip.on .n{opacity:.85}
 .turmas-faixa-pend .tfx-sair{margin-left:auto;flex-shrink:0}
@@ -1930,7 +1984,7 @@ function _renderPainelSino() {
     <div style="max-height:360px;overflow-y:auto">
       ${alertas.length ? alertas.map(a => `
         <div onclick="_fecharSino();verOrgProvedor('${a.orgId}')" style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;flex-wrap:wrap">
-          <span style="font-size:13px">${a.tipo==='critico'?'🔴':'<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4.5M12 17.2h.01"/></svg>'}</span>
+          <span style="font-size:13px">${a.tipo==='critico'?`<span style="color:var(--red);display:inline-flex"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4.5M12 17.2h.01"/></svg></span>`:'<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4.5M12 17.2h.01"/></svg>'}</span>
           <span style="font-size:12.5px;color:var(--text-1);flex:1;min-width:140px">${a.texto}</span>
           ${a.acaoHtml || ''}
           ${_htmlBtnDispensar(a)}
@@ -3760,6 +3814,10 @@ async function _iniciarPlataforma() {
       fecharModal,
       avisar: (msg, tipo) => showToast(msg, tipo === 'error' ? 'error' : 'success'),
       confirmar: (msg) => confirmarAcao(msg, 'Confirmar', true),
+      /* A lista "Requer atencao" vive na casca porque a tela Inicio precisa
+         dela sem modulo nenhum. Passar pela ponte evita a segunda copia: o
+         modulo pede, nao reimplementa. */
+      alertas: (itens) => _alertaLista(itens),
       botoes: (rotulo, id) => `<button class="btn btn-outline" onclick="fecharModal()">Cancelar</button>
         <button class="btn btn-navy" id="${id}">${rotulo}</button>`,
       aoConfirmar: (id, fn) => {
@@ -5466,14 +5524,26 @@ const _CHEVRON_ALERTA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentCol
 function _alertaLista(itens) {
   if (!itens || !itens.length) return '';
   const ordenados = [...itens].sort((a, b) => (a.grave ? 0 : 1) - (b.grave ? 0 : 1));
-  return `<div class="ds-alertas">${ordenados.map(a => `
-    <div class="ds-alerta ${a.grave ? 'grave' : ''} ${a.aoClicar ? 'clicavel' : ''}"${a.aoClicar ? ` onclick="${a.aoClicar}"` : ''}>
+  /* Se UM item tem numero, todos reservam a coluna — mesmo os que nao tem.
+     Sem isto, um alerta sem numero (o do WhatsApp desconectado, no Painel
+     comercial) comeca colado no filete enquanto os vizinhos comecam 50px
+     adiante, e a coluna que justifica este formato deixa de existir bem na
+     linha mais importante. Lista inteira sem numero nao reserva nada. */
+  const temColuna = ordenados.some((a) => a.n != null);
+  return `<div class="ds-alertas">${ordenados.map((a) => {
+    const corpo = `<div class="tx">${a.unidade ? `<b>${a.unidade}</b> ` : ''}${a.texto}</div>`
+      + (a.sub    ? `<div class="sub">${a.sub}</div>` : '')
+      + (a.abaixo ? `<div class="abaixo">${a.abaixo}</div>` : '');
+    const temBloco = !!(a.sub || a.abaixo);
+    return `
+    <div class="ds-alerta ${a.grave ? 'grave' : ''} ${a.aoClicar ? 'clicavel' : ''} ${temBloco ? 'com-bloco' : ''}"${a.aoClicar ? ` onclick="${a.aoClicar}"` : ''}>
       <span class="fil"></span>
-      ${a.n != null ? `<span class="num">${a.n}</span>` : ''}
-      <div class="tx">${a.unidade ? `<b>${a.unidade}</b> ` : ''}${a.texto}</div>
+      ${temColuna ? `<span class="num">${a.n != null ? a.n : ''}</span>` : ''}
+      ${temBloco ? `<div class="corpo">${corpo}</div>` : corpo}
       ${a.acaoHtml || (a.acao ? `<span class="ac">${a.acao}${_CHEVRON_ALERTA}</span>` : '')}
       ${a.extra || ''}
-    </div>`).join('')}</div>`;
+    </div>`;
+  }).join('')}</div>`;
 }
 
   const alertasHtml = _alertaLista(alertas.map(a => ({
@@ -5540,7 +5610,7 @@ function _alertaLista(itens) {
     </div>
 
     <div class="h2-kpis" style="margin-bottom:16px">
-      <div class="h2-kpi" onclick="irParaTurmasFiltradas('em_andamento')"><div class="ic">🟢</div><div class="n">${ativas}</div><div class="l">Turmas ativas</div><div class="d a">Em andamento</div></div>
+      <div class="h2-kpi" onclick="irParaTurmasFiltradas('em_andamento')"><div class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M10 8.8v6.4l5-3.2z"/></svg></div><div class="n">${ativas}</div><div class="l">Turmas ativas</div><div class="d a">Em andamento</div></div>
       <div class="h2-kpi" onclick="irParaTurmasFiltradas('agendada')"><div class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg></div><div class="n">${agendadas}</div><div class="l">A realizar</div><div class="d m">Próximas</div></div>
       <div class="h2-kpi" onclick="irPara('clientes')"><div class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><path d="M3 21h18M5 21V5a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v16M14 9h4a1 1 0 0 1 1 1v11M8 8h3M8 12h3M8 16h3"/></svg></div><div class="n">${cliAtivos}</div><div class="l">Clientes ativos</div><div class="d g">↑ ${turmasMes} turmas no mês</div></div>
       <div class="h2-kpi" onclick="irParaTurmasFiltradas('concluida')"><div class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/></svg></div><div class="n">${concluidas}</div><div class="l">Concluídas</div><div class="d m">Ver histórico</div></div>
@@ -5690,7 +5760,7 @@ async function renderHomeComercial() {
 
     <div class="h2-kpis" style="margin-bottom:16px">
       <div class="h2-kpi" onclick="irParaTurmasFiltradas('agendada')"><div class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg></div><div class="n">${nAgendadas}</div><div class="l">A realizar</div><div class="d m">Próximas</div></div>
-      <div class="h2-kpi" onclick="irParaTurmasFiltradas('em_andamento')"><div class="ic">🟢</div><div class="n">${nAndamento}</div><div class="l">Em andamento</div><div class="d a">Acompanhar</div></div>
+      <div class="h2-kpi" onclick="irParaTurmasFiltradas('em_andamento')"><div class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M10 8.8v6.4l5-3.2z"/></svg></div><div class="n">${nAndamento}</div><div class="l">Em andamento</div><div class="d a">Acompanhar</div></div>
       <div class="h2-kpi" onclick="irPara('clientes')"><div class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><path d="M3 21h18M5 21V5a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v16M14 9h4a1 1 0 0 1 1 1v11M8 8h3M8 12h3M8 16h3"/></svg></div><div class="n">${(clientes||[]).length}</div><div class="l">Clientes ativos</div><div class="d ${cliNovosMes>0?'g':'m'}">${cliNovosMes>0?`↑ ${cliNovosMes} novo${cliNovosMes!==1?'s':''} no mês`:'Ver clientes'}</div></div>
       <div class="h2-kpi ${nPendencia>0?'warn-b':''}" onclick="${nPendencia>0?'irParaTurmasComPendencia()':`irPara('turmas')`}"><div class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM9 12h6M9 16h4"/></svg></div><div class="n">${nPendencia}</div><div class="l">Com pendência</div><div class="d ${nPendencia>0?'a':'m'}">${nPendencia>0?'Resolver':'Tudo em dia'}</div></div>
     </div>
@@ -9545,7 +9615,7 @@ function _confRenderNivel1() {
       <div class="turmas-kpi"><div class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><path d="M3 21h18"/><path d="M6 21V11M11 21V5M16 21v-7M21 21v-4"/></svg></div><div class="n">${d.total}</div><div class="l">Total avaliado</div></div>
       <div class="turmas-kpi"><div class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/></svg></div><div class="n" style="color:var(--green)">${d.indice}%</div><div class="l">Conformes</div></div>
       <div class="turmas-kpi"><div class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4.5M12 17.2h.01"/></svg></div><div class="n" style="color:var(--red)">${d.vencidos}</div><div class="l">Vencidos</div></div>
-      <div class="turmas-kpi"><div class="ic">⏳</div><div class="n" style="color:var(--amber-h)">${vencendoEmBreve}</div><div class="l">Próx. ${JANELA_CONFORMIDADE_DIAS}d</div></div>
+      <div class="turmas-kpi"><div class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5.2l3.2 1.9"/></svg></div><div class="n" style="color:var(--amber-h)">${vencendoEmBreve}</div><div class="l">Próx. ${JANELA_CONFORMIDADE_DIAS}d</div></div>
     </div>
 
     <div class="turmas-viewtoggle" style="margin-bottom:14px">
@@ -11434,18 +11504,20 @@ function _turmasFaixaPendHtml() {
   const chip = (v, rot, n) =>
     `<button type="button" class="tfx-chip${ligado===v?' on':''}" onclick="_turmasFiltrarPend('${v}')">${escapeHtml(rot)}<span class="n">${n}</span></button>`;
 
-  return `<div class="turmas-faixa-pend">
-    <span class="tfx-ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4.5M12 17.2h.01"/></svg></span>
-    <div class="tfx-tx">
-      <div class="t1">${q} turma${q>1?'s':''} ${q>1?'não estão prontas':'não está pronta'} para rodar</div>
-      <div class="t2">Toque no que falta para ver quais são.</div>
-      <div class="tfx-chips">
-        ${chip('todas','Todas',q)}
-        ${tipos.map(p => chip(p.id, p.curto, conta[p.id])).join('')}
-      </div>
-    </div>
-    ${ligado?`<button type="button" class="ds-btn-sair tfx-sair" onclick="_turmasFiltrarPend('')">Mostrar todas as turmas</button>`:''}
-  </div>`;
+  /* Passou a usar o MESMO componente da tela Inicio (06/09, h40). Antes era
+     uma faixa tinta propria, com icone, fundo e borda coloridos — o formato
+     que saiu do Inicio e do Painel comercial. Os chips continuam iguais: eles
+     nao sao decoracao, sao o filtro; entram no bloco `abaixo` do componente. */
+  return _alertaLista([{
+    n: q,
+    unidade: q > 1 ? 'turmas' : 'turma',
+    texto: q > 1 ? 'não estão prontas para rodar' : 'não está pronta para rodar',
+    sub: 'Toque no que falta para ver quais são.',
+    abaixo: chip('todas', 'Todas', q) + tipos.map(p => chip(p.id, p.curto, conta[p.id])).join(''),
+    acaoHtml: ligado
+      ? `<button type="button" class="ds-btn-sair tfx-sair" onclick="_turmasFiltrarPend('')">Mostrar todas as turmas</button>`
+      : ''
+  }]);
 }
 
 function _turmasSetFiltro(campo, valor) {
@@ -27289,7 +27361,7 @@ async function exportarRelatorioComparativoPDF() {
   // cache do navegador. Agora o nome do cache deriva de APP_BUILD, que
   // muda a cada publicação, e o activate do sw.js apaga os caches
   // anteriores sozinho.
-  var APP_BUILD = 'h39';
+  var APP_BUILD = 'h40';
   window.APP_BUILD = APP_BUILD;
 
   function _mostrarBannerAtualizacao(){

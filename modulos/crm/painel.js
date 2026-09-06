@@ -71,29 +71,41 @@ export async function render() {
       ? ui.secao('Requer decisão hoje', { contagem: `${aguardando.length + parados.length + caixaFora.length} itens` })
       : ''}
 
-  ${aguardando.length ? ui.aviso({
-    icone:'clock', titulo:`${aguardando.length} ${aguardando.length === 1 ? 'conversa sem resposta' : 'conversas sem resposta'}`,
-    texto: aguardando.slice(0,3).map(c => c.nome).join(' · ')
+  ${ui.alertas([
+    /* Passou a usar o MESMO componente da tela Inicio (05/09, h40). Antes eram
+       tres caixas tintas seguidas — o formato que o Alisson chamou de brega, e
+       com razao: fundo, borda, icone, texto e botao na mesma cor, tres vezes
+       empilhados logo abaixo dos KPIs. Aqui a cor aparece uma vez por linha,
+       num filete, e o numero sai do meio da frase. */
+    ...(aguardando.length ? [{
+      n: aguardando.length,
+      unidade: aguardando.length === 1 ? 'conversa' : 'conversas',
+      texto: 'sem resposta',
+      sub: aguardando.slice(0, 3).map(c => ui.esc(c.nome)).join(' · ')
            + (aguardando.length > 3 ? ` · e mais ${aguardando.length - 3}` : ''),
-    acao:{ rotulo:'Abrir', acao:'ir:crm-conversas' } }) : ''}
-
-  ${parados.length ? ui.aviso({
-    icone:'doc',
-    titulo: `${parados.length} ${parados.length === 1 ? 'proposta parada' : 'propostas paradas'} há mais de 7 dias · ${ui.fmt.moeda(soma(parados))}`,
-    /* ── CORRIGIDO EM 05/09 ────────────────────────────────────────────────
-       Aqui listava TODAS as propostas paradas com valor, num paragrafo so.
-       Com 34 delas — que e o numero real em homologacao — o aviso tomava
-       metade da tela e ninguem lia nenhuma. Um aviso existe para caber numa
-       olhada: tres nomes, os de maior valor, e o resto vira contagem. */
-    texto: [...parados].sort((a,b) => (b.valor||0) - (a.valor||0)).slice(0,3)
-             .map(l => `${l.empresa} (${ui.fmt.moeda(l.valor)})`).join(' · ')
+      acao: 'Abrir', aoClicar: 'ir:crm-conversas'
+    }] : []),
+    ...(parados.length ? [{
+      n: parados.length,
+      unidade: parados.length === 1 ? 'proposta parada' : 'propostas paradas',
+      texto: `há mais de 7 dias · ${ui.fmt.moeda(soma(parados))}`,
+      /* Aqui listava TODAS as propostas paradas com valor, num paragrafo so.
+         Com 34 delas o aviso tomava metade da tela e ninguem lia nenhuma.
+         Tres nomes, os de maior valor, e o resto vira contagem. */
+      sub: [...parados].sort((a, b) => (b.valor || 0) - (a.valor || 0)).slice(0, 3)
+             .map(l => `${ui.esc(l.empresa)} (${ui.fmt.moeda(l.valor)})`).join(' · ')
            + (parados.length > 3 ? ` · e mais ${parados.length - 3}` : ''),
-    acao:{ rotulo:'Ver no funil', acao:'ir:crm-funil' } }) : ''}
-
-  ${caixaFora.map(c => ui.aviso({
-    icone:'wifioff', titulo:`Número do ${c.nome} desconectado desde ${c.desde || 'hoje'}`,
-    texto:'As mensagens continuam sendo recebidas e entram na caixa ao reconectar',
-    acao:{ rotulo:'Reconectar', acao:`crm:reconectar:${c.id}` } })).join('')}
+      acao: 'Ver no funil', aoClicar: 'ir:crm-funil'
+    }] : []),
+    /* Numero desconectado e o unico GRAVE do painel: enquanto durar, mensagem
+       de cliente nao chega em ninguem. */
+    ...caixaFora.map(c => ({
+      grave: true,
+      texto: `Número do <b>${ui.esc(c.nome)}</b> desconectado desde ${ui.esc(c.desde || 'hoje')}`,
+      sub: 'As mensagens continuam sendo recebidas e entram na caixa ao reconectar',
+      acao: 'Reconectar', aoClicar: `crm:reconectar:${c.id}`
+    }))
+  ])}
 
   ${ui.secao('Funil e agenda', { link:{ rotulo:'Ver funil completo', acao:'ir:crm-funil' } })}
   <div class="home-2col">
