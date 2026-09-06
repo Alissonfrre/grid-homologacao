@@ -165,8 +165,23 @@ function _devolverFoco(g) {
 
 export async function redesenhar() {
   if (!_telaAberta) return false;
+  /* ── A ORDEM AQUI E O CONSERTO (05/09, h39) ──────────────────────────────
+     `render()` e assincrono: consulta o banco e pode levar centenas de
+     milissegundos. Enquanto isso a tela ANTIGA continua na frente da pessoa,
+     e ela continua digitando nela.
+
+     No h38 eu guardava o texto ANTES do `await`. Quando o HTML novo chegava,
+     eu devolvia um texto ja velho — e o campo voltava algumas letras atras a
+     cada redesenho. Digitando "ceramica", ele travava em "c": cada ciclo
+     restaurava a mesma foto antiga.
+
+     Guardar DEPOIS do await e imediatamente antes de trocar o DOM: assim a
+     foto e do ultimo instante em que a tela antiga existiu, e nada do que foi
+     digitado se perde. Um `await` no meio nao e uma pausa — e uma janela em
+     que o mundo muda. */
+  const html = await _telaAberta.render(_paramsAtuais);
   const foco = _guardarFoco();
-  _destino()(await _telaAberta.render(_paramsAtuais));
+  _destino()(html);
   if (_telaAberta.depois) _telaAberta.depois(_paramsAtuais);
   _devolverFoco(foco);
   return true;
