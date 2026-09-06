@@ -50,6 +50,9 @@ export const ICO = {
   wifioff:svg(`<path ${S} d="M2 2l20 20"/><path ${S} d="M8.6 16.6a5 5 0 0 1 6.8 0M5 13.1a10 10 0 0 1 3.6-2.3M19 13.1a10 10 0 0 0-4-2.6M1.8 9.6a15 15 0 0 1 4.4-2.8M22.2 9.6a15 15 0 0 0-9.6-3M12 20h.01"/>`),
   inbox:svg(`<path ${S} d="M22 12h-6l-2 3h-4l-2-3H2"/><path ${S} d="M5.5 5.1 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.7 4H7.3a2 2 0 0 0-1.8 1.1Z"/>`),
   trend:svg(`<path ${S} d="M22 7 13.5 15.5l-4-4L2 19"/><path ${S} d="M16 7h6v6"/>`),
+  /* espelho vertical do `trend`. Existe porque o bloco "Por que perdemos"
+     usava a seta de ALTA para falar de perda. */
+  trenddown:svg(`<path ${S} d="M22 17 13.5 8.5l-4 4L2 5"/><path ${S} d="M16 17h6v-6"/>`),
   link:svg(`<path ${S} d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path ${S} d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/>`),
   headset:svg(`<path ${S} d="M4 14v-2a8 8 0 1 1 16 0v2"/><path ${S} d="M20 15a2 2 0 0 1-2 2h-1v-5h1a2 2 0 0 1 2 2zM4 15a2 2 0 0 0 2 2h1v-5H6a2 2 0 0 0-2 2z"/><path ${S} d="M18 17v1a3 3 0 0 1-3 3h-3"/>`),
   tool:svg(`<path ${S} d="M14.7 6.3a4 4 0 0 0 5.3 5.3l-8 8a2.8 2.8 0 0 1-4-4l8-8Z"/><path ${S} d="M6 18h.01"/>`),

@@ -42,7 +42,18 @@ export async function render() {
     m.n++; m.valor += (l.valor || 0);
     porMotivo.set(l.motivo_perda, m);
   }
-  const perdas = [...porMotivo.values()].sort((a, b) => b.n - a.n).slice(0, 6);
+  /* ── CORRIGIDO EM 06/09 (h48) ──────────────────────────────────────────
+     Ordenava e desenhava a barra pela CONTAGEM. Em homologacao cada motivo
+     tem exatamente um negocio perdido, entao todas as barras davam 100% —
+     quatro barras cheias, do mesmo tamanho, dizendo nada. Pior: sugeriam que
+     os quatro motivos pesam igual, quando um deles custou R$ 14.500 e os
+     outros ~R$ 4.500 cada.
+     O que a pessoa quer saber aqui e QUANTO se perdeu por motivo. A barra
+     passa a ser proporcional ao valor, e a ordem tambem. */
+  const perdas = [...porMotivo.values()].sort((a, b) => (b.valor || 0) - (a.valor || 0)).slice(0, 6);
+  const perdaMaior = Math.max(1, ...perdas.map(m => m.valor || 0));
+  const perdaTotal = perdas.reduce((t, m) => t + (m.valor || 0), 0);
+  const perdaNegocios = perdas.reduce((t, m) => t + m.n, 0);
 
   return `
   ${ui.topo({
@@ -144,14 +155,26 @@ export async function render() {
                    sub:'Preencha "Previsão de fechamento" ao editar um negócio para o funil virar previsão de caixa.' })}`)}
 
     ${ui.cartao(
-      ui.cartaoTitulo('Por que perdemos', 'trend') +
+      ui.cartaoTitulo('Por que perdemos', 'trenddown') +
       (perdas.length
-        ? `<div style="display:flex;flex-direction:column;gap:10px;margin-top:4px">${perdas.map(m => `
-            <div style="display:flex;align-items:center;gap:10px">
-              <span style="font-size:var(--fs-2);color:var(--text-2);width:150px;flex-shrink:0">${ui.esc(m.nome)}</span>
-              <div style="flex:1;height:8px;background:var(--gray-100);border-radius:4px">
-                <div style="width:${Math.round(m.n / perdas[0].n * 100)}%;height:8px;background:var(--atencao);border-radius:4px"></div></div>
-              <span class="num" style="font-size:var(--fs-2);color:var(--text-3);width:74px;text-align:right">${m.n} · ${ui.fmt.moeda(m.valor)}</span>
+        ? `<div style="font-size:var(--fs-2);color:var(--text-3);margin:-2px 0 12px">
+             ${ui.fmt.moeda(perdaTotal)} em ${perdaNegocios} ${perdaNegocios === 1 ? 'negócio' : 'negócios'}</div>
+           <div style="display:flex;flex-direction:column;gap:11px">${perdas.map(m => `
+            <div>
+              <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:5px">
+                <span style="font-size:var(--fs-2);color:var(--text-1);flex:1;min-width:0">${ui.esc(m.nome)}</span>
+                <span class="num" style="font-size:var(--fs-2);font-weight:700;color:var(--text-1)">${ui.fmt.moeda(m.valor)}</span>
+                <span class="num" style="font-size:var(--fs-1);color:var(--text-3);white-space:nowrap">${m.n} ${m.n === 1 ? 'negócio' : 'negócios'}</span>
+              </div>
+              <!-- Barra em vermelho cheio, 5px. Medido: sobre o trilho da barra o
+                   vermelho a 45% dava 2,00:1 e nao se distinguia do fundo — um
+                   grafico precisa de 3:1 para o traco valer alguma coisa. Cheio
+                   da 4,05:1. E como a largura agora e proporcional, so a maior
+                   perda ocupa a linha toda: a area colorida ficou MENOR que a
+                   das quatro barras iguais de antes. -->
+              <div style="height:5px;background:var(--gray-100);border-radius:3px;overflow:hidden">
+                <div style="width:${Math.max(3, Math.round((m.valor || 0) / perdaMaior * 100))}%;height:5px;background:var(--red);border-radius:3px"></div>
+              </div>
             </div>`).join('')}</div>`
         : ui.vazio({ icone:'check', titulo:'Nenhuma perda registrada com motivo',
                      sub:'Ao marcar um negócio como perdido, o motivo é pedido — e aparece aqui.' })),
