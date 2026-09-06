@@ -3277,7 +3277,9 @@ const ICONS = {
   cal:     `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`,
   chart:   `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>`,
   book:    `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>`,
-  team:    `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
+  /* Estava com o MESMO path do escudo — copia/cola antiga. Equipe e
+     Conformidade apareciam com o icone identico no menu. */
+  team:'<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><circle cx="9" cy="7" r="3.2"/><circle cx="17" cy="9" r="2.6"/><path d="M3 20v-1.5A4.5 4.5 0 0 1 7.5 14h3A4.5 4.5 0 0 1 15 18.5V20M17.5 14A3.5 3.5 0 0 1 21 17.5V19"/></svg>',
   shield:  `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>`,
   dots:    `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>`,
   logout:  `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>`,
@@ -3294,6 +3296,19 @@ const ICONS = {
   target:  `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>`,
   edit:    `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>`,
   clock:   `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>`,
+  /* ── Vindos de nucleo/icones.js (06/09, h44) ──────────────────────────
+     O app nao tinha estes desenhos, e uma tabela trocava o icone pedido
+     pelo mais parecido daqui: chat virava ENVELOPE, funnel virava tres
+     circulos, activity virava RELOGIO, trend e building viravam barras.
+     O modulo sempre pediu o icone certo; quem trocava era a casca.
+     Um conceito, um desenho, no sistema inteiro. */
+  trend:'<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><path d="M22 7 13.5 15.5l-4-4L2 19"/><path d="M16 7h6v6"/></svg>',
+  funnel:'<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><path d="M3 4.5h18l-7 8.2V20l-4 1.5v-8.8L3 4.5z"/></svg>',
+  chat:'<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.5 8.5 0 0 1-3.9-.9L3 20.5l1.6-4.9A8.4 8.4 0 0 1 3.6 11 8.5 8.5 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5Z"/></svg>',
+  activity:'<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><path d="M3 12h4l2.5-7 5 14L17 12h4"/></svg>',
+  cap:'<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><path d="M22 9 12 4 2 9l10 5 10-5Z"/><path d="M6 11.5V16c0 1.4 2.7 2.5 6 2.5s6-1.1 6-2.5v-4.5"/></svg>',
+  doc:'<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8"/></svg>',
+  settings:'<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex-shrink:0" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 0 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1A1.6 1.6 0 0 0 9 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1A1.6 1.6 0 0 0 4.6 9a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z"/></svg>',
 };
 
 // Botão de ação secundária com ícone em "badge" circular antes do texto
@@ -3989,7 +4004,7 @@ function _injetarMenuDosModulos({ soCache = false } = {}) {
   const nav = NAV[perfil];
   if (!nav) return;
   const iConta = nav.findIndex(i => i.sec === 'Conta');
-  const bloco = [{ sec: 'CRM' }, ...itens.map(i => ({ id: i.id, l: i.rotulo, icon: ICONE_MODULO_APP[i.icone] || 'chart' }))];
+  const bloco = [{ sec: 'CRM' }, ...itens.map(i => ({ id: i.id, l: i.rotulo, icon: i.icone }))];
   if (iConta >= 0) nav.splice(iConta, 0, ...bloco); else nav.push(...bloco);
   itens.forEach(i => { TITULOS[i.id] = i.rotulo; });
 }
@@ -4036,8 +4051,9 @@ const MENU_CONFIG_IDS = ['equipe', 'conta'];
 // Os nomes de icone dos modulos (nucleo/icones.js) nao sao os do app (ICONS).
 // Este mapa e a traducao — pequeno de proposito: icone novo sem traducao cai
 // no de grafico em vez de sumir da tela.
-const ICONE_MODULO_APP = { trend:'chart', chat:'mail', funnel:'target', user:'user',
-                           activity:'clock', phone:'phone' };
+/* ICONE_MODULO_APP foi removida no h44: era a tabela que traduzia o nome do
+   icone do modulo para o mais parecido que o app tinha. Agora o app tem o
+   desenho certo e usa o nome que o modulo declarou, sem intermediario. */
 
 // O ICONS do app nao tem chevron; desenhar aqui evita reaproveitar a seta de
 // "voltar" girada, que fica torta em tamanho pequeno.
@@ -4080,7 +4096,7 @@ function _htmlMenuLateral(itens) {
   const nomes = {};
   if (_GRID) {
     for (const item of _GRID.itensDeMenu(perfilAtual)) idsDeModulo[item.id] = item.modulo;
-    for (const m of _GRID.modulos()) nomes[m.id] = { nome: m.nome, icone: ICONE_MODULO_APP[m.icone] || 'chart' };
+    for (const m of _GRID.modulos()) nomes[m.id] = { nome: m.nome, icone: m.icone };
   } else {
     // Primeiro quadro: os modulos ainda estao baixando. O menu ja e o
     // definitivo — ele nao vai mudar quando eles chegarem.
@@ -4104,7 +4120,7 @@ function _htmlMenuLateral(itens) {
   const base    = soItens.filter(i => i.id !== 'home' && !MENU_CONFIG_IDS.includes(i.id) && !idsDeModulo[i.id]);
 
   const blocos = [];
-  if (base.length) blocos.push(_blocoMenuHtml('treinamentos', 'Treinamentos', 'clip', base, _blocoAberto('treinamentos', true)));
+  if (base.length) blocos.push(_blocoMenuHtml('treinamentos', 'Treinamentos', 'cap', base, _blocoAberto('treinamentos', true)));
   for (const modId of Object.keys(nomes)) {
     const seus = soItens.filter(i => idsDeModulo[i.id] === modId);
     if (seus.length) blocos.push(_blocoMenuHtml(modId, nomes[modId].nome, nomes[modId].icone, seus, _blocoAberto(modId, true)));
@@ -27375,7 +27391,7 @@ async function exportarRelatorioComparativoPDF() {
   // cache do navegador. Agora o nome do cache deriva de APP_BUILD, que
   // muda a cada publicação, e o activate do sw.js apaga os caches
   // anteriores sozinho.
-  var APP_BUILD = 'h43';
+  var APP_BUILD = 'h44';
   window.APP_BUILD = APP_BUILD;
 
   function _mostrarBannerAtualizacao(){
