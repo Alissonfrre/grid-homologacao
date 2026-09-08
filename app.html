@@ -3982,13 +3982,18 @@ function _ligarAcoesDeModulo() {
 const MENU_MODULO_PREVIO = {
   crm: [
     { id:'crm',            rotulo:'Painel comercial', icone:'trend',    perfis:['administrador','comercial'] },
-    { id:'crm-conversas',  rotulo:'Conversas',        icone:'chat',     perfis:['administrador','comercial'] },
+    /* Conversas e WhatsApp NAO entram no preview: dependem da funcionalidade
+       `whatsapp`, que so o manifesto do modulo sabe consultar (08/09/2026).
+       Preview e um palpite para o primeiro quadro — palpite que mostra a mais
+       deixa item morto no menu, entao o palpite erra para menos. */
     { id:'crm-funil',      rotulo:'Funil de vendas',  icone:'funnel',   perfis:['administrador','comercial'] },
     { id:'crm-contatos',   rotulo:'Contatos',         icone:'user',     perfis:['administrador','comercial'] },
     { id:'crm-atividades', rotulo:'Atividades',       icone:'activity', perfis:['administrador','comercial'] },
-    { id:'crm-numeros',    rotulo:'WhatsApp',         icone:'phone',    perfis:['administrador'] }
   ]
 };
+
+/* Ids que a ultima passada injetou no menu — ver a correcao de 08/09 abaixo. */
+let _idsDeModuloNoMenu = [];
 
 function _injetarMenuDosModulos({ soCache = false } = {}) {
   const perfil = usuarioAtual.perfil;
@@ -4002,15 +4007,22 @@ function _injetarMenuDosModulos({ soCache = false } = {}) {
     itens = _GRID.itensDeMenu(perfil);
     console.info('[modulos] itens de menu para', perfil, ':', itens.map(i => i.id));
   }
-  if (!itens.length) return;
-  // Redesenho: tira o que a passada anterior colocou, para nao duplicar item.
+  /* ── CORRIGIDO EM 08/09/2026 ─────────────────────────────────────────
+     A limpeza removia só o que estava prestes a ser recolocado. Item que a
+     passada anterior colocou e a nova NAO tem — porque a funcionalidade nao
+     esta contratada — ficava no menu para sempre, levando a "Esta secao esta
+     sendo construida". Agora guardamos o que foi injetado e removemos isso.
+     E a limpeza acontece ANTES do retorno por lista vazia: modulo que perdeu
+     todos os itens tambem precisa sumir do menu. */
   const navLimpar = NAV[perfil];
   if (navLimpar) {
-    const ids = new Set(itens.map(i => i.id));
+    const ids = new Set([...itens.map(i => i.id), ..._idsDeModuloNoMenu]);
     for (let k = navLimpar.length - 1; k >= 0; k--) {
       if (ids.has(navLimpar[k].id) || navLimpar[k].sec === 'CRM') navLimpar.splice(k, 1);
     }
   }
+  _idsDeModuloNoMenu = itens.map(i => i.id);
+  if (!itens.length) return;
   const nav = NAV[perfil];
   if (!nav) return;
   const iConta = nav.findIndex(i => i.sec === 'Conta');
@@ -27401,7 +27413,7 @@ async function exportarRelatorioComparativoPDF() {
   // cache do navegador. Agora o nome do cache deriva de APP_BUILD, que
   // muda a cada publicação, e o activate do sw.js apaga os caches
   // anteriores sozinho.
-  var APP_BUILD = 'h49';
+  var APP_BUILD = 'h50';
   window.APP_BUILD = APP_BUILD;
 
   function _mostrarBannerAtualizacao(){
@@ -27455,4 +27467,4 @@ async function exportarRelatorioComparativoPDF() {
 </script>
 </body>
 </html>
-                                                                                                                                         
+                                                                                                                                         
