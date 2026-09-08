@@ -1,81 +1,85 @@
 /* ══════════════════════════════════════════════════════════════════════════
-   GRID · modulos/crm/modulo.js
-   Manifesto do módulo. É o único ponto de contato com a plataforma: a casca
-   lê este arquivo, acrescenta os itens ao menu e nada mais.
+   GRID · nucleo/plataforma.js
+   O objeto que os módulos enxergam. É a única superfície de contato entre
+   um módulo e o resto do sistema — se algo não está aqui, o módulo não pode
+   usar. Isso é de propósito.
 
-   `mobile` é a decisão de escopo de celular aprovada em 03/09 — declarada
-   aqui, no dado, e não no julgamento de quem escreve cada tela.
-   `perfis` decide o que aparece no menu; a trava de verdade é a policy
-   RESTRICTIVE no banco.
+   Uso dentro do app.html (script clássico, sem virar módulo):
+     const { GRID } = await import('./nucleo/plataforma.js?v=' + APP_BUILD);
    ══════════════════════════════════════════════════════════════════════════ */
 
-import acoes from './acoes.js';
+import * as ui        from './ui.js';
+import * as sessao    from './sessao.js';
+import * as dados     from './dados.js';
+import * as navegacao from './navegacao.js';
+import { ICO, icone } from './icones.js';
 
-export default {
-  id: 'crm',
-  /* Onde as acoes declaradas pelas telas viram escrita. A plataforma chama
-     isto quando a propria tela nao tratou a acao. */
-  acoes,
-  nome: 'CRM',
-  icone: 'funnel',
-  css: './modulos/crm/crm.css',
+export const GRID = {
+  versao: '1.0.0',
+  ui, sessao, dados, navegacao,
+  icones: { ICO, icone },
 
-  itens: [
-    { id:'crm',             rotulo:'Painel comercial', icone:'trend',
-      perfis:['administrador','comercial'], mobile:true,
-      rota:() => import('./painel.js') },
+  /* Carrega os módulos contratados. Tolerante por desenho: se a consulta
+     falhar, nenhum módulo é registrado e o app segue exatamente como hoje. */
+  async carregarModulos(ids, build = 'dev') {
+    /* Antes dos modulos: o que a organizacao tem contratado DENTRO deles.
+       Sem isto, itensDeMenu nao teria como esconder uma tela cuja
+       funcionalidade nao foi contratada. Nunca lanca. */
+    await dados.carregarFuncionalidades();
+    const carregados = [];
+    for (const id of ids) {
+      try {
+        const mod = (await import(`../modulos/${id}/modulo.js?v=${build}`)).default;
+        navegacao.registrar(mod);
+        carregados.push(mod);
+      } catch (e) {
+        console.warn(`[GRID] módulo "${id}" não carregou:`, e?.message);
+      }
+    }
+    return carregados;
+  },
 
-    /* Conversas e WhatsApp dependem de gateway em VPS propria, que ainda nao
-       existe. Ate la as telas rodam com dados de demonstracao — por isso so
-       aparecem para quem tiver a funcionalidade `whatsapp` contratada
-       (organizacoes_modulo_funcionalidades). Ausencia de linha = nao aparece.
-       Ver 05-Decisoes/2026-09-08-conversas-mostram-dados-inventados-sem-aviso.md */
-    { id:'crm-conversas',   rotulo:'Conversas', icone:'chat', funcionalidade:'whatsapp',
-      perfis:['administrador','comercial'], mobile:true,
-      rota:() => import('./conversas.js') },
+  /* Ponto único de entrada do roteador: devolve false quando a rota não
+     pertence a nenhum módulo, e aí o app segue com o switch que já tem. */
+  async abrir(rota, params) { return navegacao.abrir(rota, params); },
 
-    { id:'crm-funil',       rotulo:'Funil de vendas', icone:'funnel',
-      perfis:['administrador','comercial'], mobile:true,
-      rota:() => import('./funil.js') },
+  /* Onde os módulos desenham. A casca passa o próprio container aqui uma vez;
+     sem isso, navegacao.abrir() não teria onde escrever. */
+  definirContainer(el) { navegacao.definirContainer(el); },
 
-    { id:'crm-contatos',    rotulo:'Contatos', icone:'user',
-      perfis:['administrador','comercial'], mobile:true,
-      rota:() => import('./contatos.js') },
+  /* Traduz uma ação declarada por uma tela em comportamento. Devolve false
+     quando ninguém respondeu — a casca avisa, em vez de fingir que fez. */
+  async tratarAcao(acao) { return navegacao.tratarAcao(acao); },
 
-    { id:'crm-atividades',  rotulo:'Atividades', icone:'activity',
-      perfis:['administrador','comercial'], mobile:true,
-      rota:() => import('./atividades.js') },
+  /* A casca informa como navegar e como abrir modal/aviso. Sem isto, o módulo
+     teria que conhecer o app por dentro — que é exatamente o que a plataforma
+     existe para evitar. */
+  aoNavegar(fn) { navegacao.aoNavegar(fn); },
+  ponte: {},
+  definirPonte(p) { Object.assign(this.ponte, p); if (typeof window !== 'undefined') window.__GRID_PONTE = this.ponte; },
 
-    { id:'crm-numeros',     rotulo:'WhatsApp', icone:'phone', funcionalidade:'whatsapp',
-      perfis:['administrador'], mobile:false,
-      textoDesktop:'Configurar equipe, horário de atendimento e mensagem de ausência é trabalho de mesa. No computador esta tela abre direto.',
-      alternativa:{ rotulo:'Ver status dos números', acao:'ir:crm-numeros-status' },
-      rota:() => import('./numeros.js') },
+  /* Os módulos carregados, na ordem em que entraram. A casca usa para montar
+     um bloco de menu por módulo. */
+  modulos() { return navegacao.registrados(); },
 
-    { id:'crm-empresa',     rotulo:'Empresas', icone:'company',
-      perfis:['administrador','comercial'], mobile:true,
-      rota:() => import('./empresa.js') },
-
-    /* Configuracao do funil: chega pelo botao no topo do Funil de vendas, nao
-       pelo menu — e tela de ajuste, nao de trabalho diario. */
-    { id:'crm-funis', rotulo:'Configuração do funil', icone:'settings', oculto:true,
-      perfis:['administrador'], mobile:false,
-      textoDesktop:'Criar funis, renomear etapas e definir cores é trabalho de mesa. No computador esta tela abre direto.',
-      rota:() => import('./funis.js') },
-
-    /* Ficha do lead: existe como rota, não como item de menu. */
-    { id:'crm-lead', rotulo:'Lead', icone:'funnel', oculto:true,
-      perfis:['administrador','comercial'], mobile:true,
-      rota:() => import('./lead.js') }
-  ],
-
-  /* Contadores mostrados no menu e no bloco recolhido do módulo. */
-  async contadores(dados) {
-    if (!dados.temFuncionalidade('whatsapp')) return {};
-    try {
-      const conversas = await dados.listar('crm_conversas');
-      const naoLidas = conversas.filter(c => c.nao_lidas > 0).length;
-      return naoLidas ? { 'crm-conversas': naoLidas } : {};
-    } catch { return {}; }
+  /* Itens de menu de todos os módulos carregados, já filtrados pelo perfil e
+     pelo que faz sentido no aparelho atual. A casca acrescenta ao menu dela;
+     quem decide o que existe continua sendo o manifesto de cada módulo. */
+  itensDeMenu(perfil) {
+    const fora = [];
+    for (const mod of navegacao.registrados()) {
+      for (const item of (mod.itens || [])) {
+        if (item.oculto) continue;                        // rotas de detalhe
+        if (item.perfis && !item.perfis.includes(perfil)) continue;
+        /* Tela que depende de funcionalidade contratada (ex.: WhatsApp dentro
+           do CRM). Ausencia de linha no banco = desligado. */
+        if (item.funcionalidade && !dados.temFuncionalidade(item.funcionalidade)) continue;
+        fora.push({ id: item.id, rotulo: item.rotulo, icone: item.icone, modulo: mod.id });
+      }
+    }
+    return fora;
   }
 };
+
+if (typeof window !== 'undefined') window.GRID = GRID;
+export default GRID;
