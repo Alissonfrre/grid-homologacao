@@ -5133,6 +5133,12 @@ const _MODULOS_DO_PRODUTO = [
     ] }
 ];
 
+/* `leitura_ate` e uma DATA, nao um instante. `new Date('2026-12-07')` e lido
+   como meia-noite UTC e, em UTC-3, volta 06/12 na tela — o mesmo defeito de
+   fuso que o h26 teve na previsao de fechamento. Aqui a data nunca vira Date:
+   os pedacos do texto sao reordenados. */
+const _dataSoDia = (iso) => String(iso || '').slice(0, 10).split('-').reverse().join('/');
+
 function _htmlModulosOrg() {
   const est = window._orgModulosAtual;
   if (!est) return '';
@@ -5157,7 +5163,7 @@ function _htmlModulosOrg() {
     return `
     <div style="border-bottom:1px solid var(--border)">
       ${linha({ nome: mod.nome, desc: mod.desc, on, acao: `alternarModuloOrg('${mod.id}', this.checked)`,
-                aviso: (!on && ate) ? `Desligado. Os dados continuam consultáveis até ${new Date(ate).toLocaleDateString('pt-BR')}.` : '' })}
+                aviso: (!on && ate) ? `Desligado. Os dados continuam consultáveis até ${_dataSoDia(ate)}.` : '' })}
       ${(mod.funcionalidades || []).map(f => `
         <div style="margin-left:26px;border-top:1px solid var(--border)">
           ${linha({ nome: f.nome, desc: f.desc, on: funcLigada(mod.id, f.id), travado: !on,
@@ -27551,7 +27557,7 @@ async function exportarRelatorioComparativoPDF() {
   // cache do navegador. Agora o nome do cache deriva de APP_BUILD, que
   // muda a cada publicação, e o activate do sw.js apaga os caches
   // anteriores sozinho.
-  var APP_BUILD = 'h51';
+  var APP_BUILD = 'h52';
   window.APP_BUILD = APP_BUILD;
 
   function _mostrarBannerAtualizacao(){
